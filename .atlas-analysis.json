@@ -1,0 +1,134 @@
+{
+  "projectType": "saas",
+  "projectName": "Anchor",
+  "projectDescription": "An offline-first, self-hostable note-taking application with rich text editing, cross-device sync, note sharing, and OIDC authentication support.",
+  "theme": "willow",
+  "primaryColor": "#242b2c",
+  "lightColor": "#040404",
+  "darkColor": null,
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": ["introduction", "features"]
+          },
+          {
+            "group": "Self Hosting",
+            "pages": [
+              "self-hosting/docker",
+              "self-hosting/configuration",
+              "self-hosting/database"
+            ]
+          },
+          {
+            "group": "Authentication",
+            "pages": [
+              "authentication/local-auth",
+              "authentication/oidc"
+            ]
+          },
+          {
+            "group": "Mobile App",
+            "pages": ["mobile/android"]
+          },
+          {
+            "group": "Admin Guide",
+            "pages": [
+              "admin/overview",
+              "admin/user-management",
+              "admin/settings"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": ["api-reference/overview", "api-reference/authentication"]
+          },
+          {
+            "group": "Notes",
+            "pages": [
+              "api-reference/notes/list",
+              "api-reference/notes/create",
+              "api-reference/notes/get",
+              "api-reference/notes/update",
+              "api-reference/notes/delete",
+              "api-reference/notes/sync",
+              "api-reference/notes/bulk-actions"
+            ]
+          },
+          {
+            "group": "Tags",
+            "pages": [
+              "api-reference/tags/list",
+              "api-reference/tags/create",
+              "api-reference/tags/update",
+              "api-reference/tags/delete"
+            ]
+          },
+          {
+            "group": "Note Sharing",
+            "pages": [
+              "api-reference/shares/list",
+              "api-reference/shares/create",
+              "api-reference/shares/update",
+              "api-reference/shares/delete"
+            ]
+          },
+          {
+            "group": "Users",
+            "pages": [
+              "api-reference/users/me",
+              "api-reference/users/profile",
+              "api-reference/users/api-token"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Offline-first architecture — all notes stored and editable locally",
+    "Automatic cross-device sync when online",
+    "Rich text editor with formatting, headings, lists, and checkboxes",
+    "Note sharing with viewer or editor permissions",
+    "Tags with custom colors for organization",
+    "Pin, archive, and trash notes with soft-delete recovery",
+    "OIDC authentication (Pocket ID, Authelia, Keycloak, etc.)",
+    "Self-hostable via Docker with embedded or external PostgreSQL",
+    "Admin panel for user management, registration control, and system stats",
+    "Flutter-based Android mobile app with offline support"
+  ],
+  "publicApiSurface": [
+    "POST /api/auth/register",
+    "POST /api/auth/login",
+    "POST /api/auth/refresh",
+    "POST /api/auth/logout",
+    "GET /api/auth/me",
+    "GET /api/auth/api-token",
+    "GET /api/notes",
+    "POST /api/notes",
+    "POST /api/notes/sync",
+    "GET /api/notes/trash",
+    "GET /api/notes/archive",
+    "GET /api/notes/:id",
+    "PATCH /api/notes/:id",
+    "DELETE /api/notes/:id",
+    "POST /api/notes/bulk/delete",
+    "POST /api/notes/bulk/archive",
+    "GET /api/tags",
+    "POST /api/tags",
+    "PATCH /api/tags/:id",
+    "DELETE /api/tags/:id",
+    "GET /api/admin/stats",
+    "GET /api/admin/users",
+    "PATCH /api/admin/settings/registration",
+    "PATCH /api/admin/settings/oidc"
+  ]
+}
