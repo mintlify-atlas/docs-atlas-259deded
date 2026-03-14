@@ -1,0 +1,230 @@
+---
+title: "OIDC authentication"
+description: "Sign in with OpenID Connect providers like Pocket ID, Authelia, and Keycloak"
+---
+
+Anchor supports OpenID Connect (OIDC), letting your users sign in through any standard identity provider instead of managing separate passwords. OIDC is optional — it can run alongside local authentication or replace it entirely.
+
+## What OIDC gives you
+
+- **Single sign-on** — users log in with their existing identity provider account.
+- **No passwords to manage** — credentials live in your IdP, not in Anchor's database.
+- **Public client support** — configure Anchor as a public OIDC client using PKCE (no client secret required). This is required for the mobile app.
+- **Auto user creation** — accounts are created automatically on the first OIDC login (unless registration is disabled).
+- **Auto account linking** — if a user with the same email already exists in Anchor, their account is linked to the OIDC identity automatically.
+
+## Supported providers
+
+Anything that speaks standard OIDC works. Tested providers include:
+
+- [Pocket ID](https://pocketid.app)
+- [Authelia](https://www.authelia.com)
+- [Authentik](https://goauthentik.io)
+- [Keycloak](https://www.keycloak.org)
+
+## Set up OIDC
+
+<Steps>
+  <Step title="Create an OIDC client in your identity provider">
+    In your IdP, create a new OIDC application (also called a client or app). You will need:
+
+    - A **client ID** (and optionally a **client secret** — omit for public/PKCE clients)
+    - The ability to configure allowed **redirect URIs**
+
+    Add the following redirect URIs:
+
+    | Use case | Redirect URI |
+    |----------|--------------|
+    | Web app | `{APP_URL}/api/auth/oidc/callback` |
+    | Mobile app | `anchor://oidc/callback` |
+
+    Replace `{APP_URL}` with the public URL where your Anchor instance is served, for example `https://notes.example.com`.
+
+    <Warning>
+      The mobile app requires a **public client** (PKCE, no client secret). If your IdP enforces a client secret, mobile OIDC sign-in will not work. Either create a separate public client for mobile or disable the client secret requirement.
+    </Warning>
+  </Step>
+
+  <Step title="Configure Anchor">
+    You can configure OIDC either with environment variables (recommended for production) or through the admin panel.
+
+    <Tabs>
+      <Tab title="Environment variables">
+        Add the following to the `environment` section of your `docker-compose.yml`:
+
+        ```yaml docker-compose.yml
+        services:
+          anchor:
+            image: ghcr.io/zhfahim/anchor:latest
+            container_name: anchor
+            restart: unless-stopped
+            ports:
+              - "3000:3000"
+            environment:
+              - APP_URL=https://notes.example.com
+              - OIDC_ENABLED=true
+              - OIDC_PROVIDER_NAME=My Identity Provider
+              - OIDC_ISSUER_URL=https://auth.example.com
+              - OIDC_CLIENT_ID=your-client-id
+              - OIDC_CLIENT_SECRET=your-client-secret  # omit for public client
+              - DISABLE_INTERNAL_AUTH=false
+            volumes:
+              - anchor_data:/data
+
+        volumes:
+          anchor_data:
+        ```
+
+        | Variable | Required | Description |
+        |----------|----------|-------------|
+        | `OIDC_ENABLED` | Yes | Set to `true` to enable OIDC. |
+        | `OIDC_ISSUER_URL` | Yes | Base URL of your OIDC provider (the discovery document is fetched from `{OIDC_ISSUER_URL}/.well-known/openid-configuration`). |
+        | `OIDC_CLIENT_ID` | Yes | Client ID from your IdP. |
+        | `OIDC_CLIENT_SECRET` | No | Client secret. Omit for public clients (PKCE). |
+        | `OIDC_PROVIDER_NAME` | No | Label shown on the login button. Defaults to `OIDC Provider`. |
+        | `DISABLE_INTERNAL_AUTH` | No | Set to `true` to hide the local login form. Defaults to `false`. |
+        | `APP_URL` | No | Public URL of your Anchor instance. Required for the callback URL to work correctly. |
+
+        When `OIDC_ENABLED`, `OIDC_ISSUER_URL`, and `OIDC_CLIENT_ID` are all set, the environment variables take precedence and the admin panel OIDC settings become read-only.
+      </Tab>
+
+      <Tab title="Admin panel">
+        If the three required environment variables (`OIDC_ENABLED`, `OIDC_ISSUER_URL`, `OIDC_CLIENT_ID`) are not all set, you can configure OIDC from the admin panel:
+
+        1. Sign in as an admin.
+        2. Navigate to **Settings** → **OIDC Authentication**.
+        3. Fill in the issuer URL, client ID, and optional client secret.
+        4. Enable OIDC and save.
+
+        <Note>
+          Admin panel settings are stored in the database. If you later set the environment variables, they will override the database settings.
+        </Note>
+      </Tab>
+    </Tabs>
+  </Step>
+
+  <Step title="Restart Anchor">
+    Apply the configuration by restarting the container:
+
+    ```bash
+    docker compose up -d
+    ```
+  </Step>
+
+  <Step title="Test the login flow">
+    Open your Anchor instance and confirm that the OIDC sign-in button appears on the login page. Sign in with your identity provider to verify the flow end to end.
+  </Step>
+</Steps>
+
+## Provider examples
+
+<Tabs>
+  <Tab title="Pocket ID">
+    1. In Pocket ID, create a new OIDC client.
+    2. Set the redirect URI to `https://notes.example.com/api/auth/oidc/callback`.
+    3. For mobile support, also add `anchor://oidc/callback`.
+    4. Copy the client ID and (optionally) the client secret.
+
+    `docker-compose.yml` snippet:
+
+    ```yaml docker-compose.yml
+    environment:
+      - APP_URL=https://notes.example.com
+      - OIDC_ENABLED=true
+      - OIDC_PROVIDER_NAME=Pocket ID
+      - OIDC_ISSUER_URL=https://pocketid.example.com
+      - OIDC_CLIENT_ID=your-pocket-id-client-id
+      - OIDC_CLIENT_SECRET=your-pocket-id-client-secret
+    ```
+  </Tab>
+
+  <Tab title="Keycloak">
+    1. In your Keycloak realm, go to **Clients** and create a new client.
+    2. Set the **Client ID** (e.g. `anchor`).
+    3. Enable **Standard flow** (authorization code flow).
+    4. Add `https://notes.example.com/api/auth/oidc/callback` to **Valid redirect URIs**.
+    5. For mobile support, also add `anchor://oidc/callback`.
+    6. Copy the client secret from the **Credentials** tab, or set **Access type** to `public` for PKCE.
+
+    The Keycloak issuer URL format is:
+
+    ```
+    https://keycloak.example.com/realms/{your-realm}
+    ```
+
+    `docker-compose.yml` snippet:
+
+    ```yaml docker-compose.yml
+    environment:
+      - APP_URL=https://notes.example.com
+      - OIDC_ENABLED=true
+      - OIDC_PROVIDER_NAME=Keycloak
+      - OIDC_ISSUER_URL=https://keycloak.example.com/realms/myrealm
+      - OIDC_CLIENT_ID=anchor
+      - OIDC_CLIENT_SECRET=your-keycloak-client-secret
+    ```
+  </Tab>
+</Tabs>
+
+## Callback URL
+
+The web callback URL that must be registered with your OIDC provider is:
+
+```
+{APP_URL}/api/auth/oidc/callback
+```
+
+For example, if Anchor is running at `https://notes.example.com`:
+
+```
+https://notes.example.com/api/auth/oidc/callback
+```
+
+This is the endpoint Anchor's server handles after the user authenticates with the provider. It exchanges the authorization code for tokens, resolves or creates the user account, and redirects the browser back to the frontend.
+
+## Mobile app (PKCE / public client)
+
+The Anchor mobile app uses PKCE for OIDC — it never holds a client secret. To support mobile sign-in:
+
+1. Configure your OIDC client as a **public client** (no client secret, or PKCE enabled).
+2. Add `anchor://oidc/callback` as an allowed redirect URI in your IdP.
+3. Do **not** set `OIDC_CLIENT_SECRET` in Anchor's environment, or your IdP must not require a secret for this client.
+
+<Warning>
+  Do not share a confidential client (with a client secret) between the web app and the mobile app. A client secret embedded in a mobile app can be extracted. Use a separate public client for mobile, or configure your IdP client to support both confidential (web) and public (mobile) flows if the IdP allows it.
+</Warning>
+
+The mobile app sends the IdP access token to `POST /api/auth/oidc/exchange/mobile`, which validates it against the OIDC userinfo endpoint and returns Anchor's own access and refresh tokens.
+
+## User provisioning
+
+### Auto user creation
+
+When a user signs in via OIDC for the first time and no matching account exists, Anchor creates one automatically. The account is immediately active — no email verification required.
+
+If `USER_SIGNUP` is set to `disabled`, auto-creation is blocked and the sign-in attempt fails.
+
+### Auto account linking
+
+<Note>
+  If a user with the same email address already has a local Anchor account, Anchor links the OIDC identity to that account on first OIDC login. The user can then sign in with either method (unless local auth is disabled).
+</Note>
+
+Linking is based on the email claim returned by the OIDC provider. Once linked, subsequent logins are matched by the OIDC `sub` (subject) claim, which is stable even if the email changes.
+
+### Profile sync
+
+On every OIDC login, Anchor syncs the user's display name and profile picture from the IdP claims (`name`, `picture`). Manual changes to the name or picture in Anchor are overwritten on the next OIDC sign-in.
+
+## OIDC-only mode
+
+To hide the local login form and require all users to sign in through OIDC, set:
+
+```yaml docker-compose.yml
+environment:
+  - DISABLE_INTERNAL_AUTH=true
+```
+
+Local accounts still exist and the underlying API endpoints remain active, but the sign-in UI only shows the OIDC button. This is useful for team deployments where everyone authenticates through a shared IdP.
+
+See [Local authentication](/authentication/local-auth) for details on managing local accounts when running in OIDC-only mode.

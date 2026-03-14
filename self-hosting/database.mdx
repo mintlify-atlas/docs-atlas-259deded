@@ -1,0 +1,149 @@
+---
+title: "Database"
+description: "Embedded and external PostgreSQL database options for Anchor"
+---
+
+Anchor uses PostgreSQL for all persistent storage. The Docker image ships with an embedded PostgreSQL 18 instance so you can get started with zero external dependencies, but you can also connect to your own PostgreSQL server.
+
+## Choosing a database option
+
+<Tabs>
+  <Tab title="Embedded PostgreSQL (default)">
+    The Anchor Docker image bundles a full PostgreSQL 18 server. It starts automatically alongside the API and web server using `supervisord` — no extra containers or configuration required.
+
+    **When to use embedded:**
+    - Personal use or small teams
+    - You want a simple, single-container setup
+    - You don't already operate a PostgreSQL server
+
+    No environment variables are needed. Just leave `PG_HOST` unset (or empty) and Anchor will use the internal database.
+
+    ```yaml docker-compose.yml
+    services:
+      anchor:
+        image: ghcr.io/zhfahim/anchor:latest
+        container_name: anchor
+        restart: unless-stopped
+        ports:
+          - "3000:3000"
+        volumes:
+          - anchor_data:/data
+
+    volumes:
+      anchor_data:
+    ```
+
+    The embedded database stores its files at `/data/postgres` inside the container, which is covered by the `anchor_data` volume.
+  </Tab>
+
+  <Tab title="External PostgreSQL">
+    You can point Anchor at any external PostgreSQL server by setting the `PG_*` environment variables.
+
+    **When to use external:**
+    - You already operate a managed PostgreSQL service (e.g. AWS RDS, Supabase, Neon)
+    - You need database-level backups, replication, or point-in-time recovery
+    - You are running multiple Anchor instances against a shared database
+
+    Set the following environment variables:
+
+    | Variable | Default | Description |
+    |----------|---------|-------------|
+    | `PG_HOST` | (empty) | Hostname or IP of your PostgreSQL server. Setting this switches Anchor to external mode. |
+    | `PG_PORT` | `5432` | PostgreSQL port. |
+    | `PG_USER` | `anchor` | PostgreSQL username. |
+    | `PG_PASSWORD` | `password` | PostgreSQL password. |
+    | `PG_DATABASE` | `anchor` | Database name. |
+
+    ```yaml docker-compose.yml
+    services:
+      anchor:
+        image: ghcr.io/zhfahim/anchor:latest
+        container_name: anchor
+        restart: unless-stopped
+        ports:
+          - "3000:3000"
+        environment:
+          - PG_HOST=db.example.com
+          - PG_PORT=5432
+          - PG_USER=anchor
+          - PG_PASSWORD=strong-password
+          - PG_DATABASE=anchor
+        volumes:
+          - anchor_data:/data
+
+    volumes:
+      anchor_data:
+    ```
+
+    <Note>
+      Even when using an external database, keep the `anchor_data` volume mounted. Anchor still uses `/data` to persist the auto-generated `JWT_SECRET` and other runtime state.
+    </Note>
+
+    Anchor runs Prisma migrations automatically on startup, so the database schema is always up to date.
+  </Tab>
+</Tabs>
+
+## Data persistence
+
+All persistent data is stored under `/data` inside the container, mapped to the `anchor_data` named Docker volume:
+
+| Path | Contents |
+|------|----------|
+| `/data/postgres/` | Embedded PostgreSQL data files (only used when `PG_HOST` is not set) |
+| `/data/jwt_secret` | Auto-generated JWT secret, persisted so it survives container restarts |
+
+<Warning>
+  Do not delete the `anchor_data` volume while Anchor is using the embedded database. Doing so will permanently destroy all notes, users, and settings.
+</Warning>
+
+To verify the volume exists:
+
+```bash
+docker volume ls | grep anchor_data
+```
+
+## Backups
+
+<CodeGroup>
+
+```bash Back up the data volume
+docker run --rm \
+  -v anchor_data:/data \
+  -v $(pwd):/backup \
+  alpine \
+  tar czf /backup/anchor-backup.tar.gz /data
+```
+
+```bash Restore from backup
+docker run --rm \
+  -v anchor_data:/data \
+  -v $(pwd):/backup \
+  alpine \
+  tar xzf /backup/anchor-backup.tar.gz -C /
+```
+
+</CodeGroup>
+
+This creates a compressed archive of the entire `/data` directory, including the embedded PostgreSQL files and JWT secret. Store the resulting `anchor-backup.tar.gz` file somewhere safe.
+
+<Note>
+  Stop the Anchor container before running a backup to ensure the database files are in a consistent state:
+  ```bash
+  docker compose stop && docker run --rm -v anchor_data:/data -v $(pwd):/backup alpine tar czf /backup/anchor-backup.tar.gz /data && docker compose start
+  ```
+</Note>
+
+## Schema overview
+
+Anchor uses [Prisma](https://www.prisma.io/) to manage the database schema. The main models are:
+
+| Model | Description |
+|-------|-------------|
+| `User` | Registered users. Stores email, display name, profile image, admin flag, account status (`active` / `pending`), and an optional OIDC subject identifier for linked SSO accounts. |
+| `Note` | A user's note. Stores title, rich-text content, pinned/archived flags, a background style, and a state (`active`, `trashed`, or `deleted`). |
+| `Tag` | A label that can be applied to notes. Belongs to a user and has an optional colour. |
+| `NoteShare` | A sharing relationship between a note and another user, with a permission level of `viewer` or `editor`. |
+| `Settings` | Key/value store for system-wide settings managed via the admin panel (e.g. OIDC configuration, sign-up mode). |
+| `RefreshToken` | Active refresh tokens for authenticated sessions. |
+
+You do not need to create or modify the schema manually — Anchor applies migrations automatically at startup.

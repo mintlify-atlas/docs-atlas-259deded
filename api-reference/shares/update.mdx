@@ -1,0 +1,107 @@
+---
+title: "Update share"
+description: "Change a share's permission"
+---
+
+<Info>
+  All requests to this endpoint require an `Authorization: Bearer <token>` header.
+</Info>
+
+## Request
+
+**PATCH** `/api/notes/:id/shares/:shareId`
+
+Updates the permission level on an existing note share. Only the note owner can modify share permissions.
+
+### Headers
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token. Example: `Bearer eyJhbGci...`
+</ParamField>
+
+<ParamField header="Content-Type" type="string" required>
+  Must be `application/json`.
+</ParamField>
+
+### Path parameters
+
+<ParamField path="id" type="string" required>
+  The UUID of the note.
+</ParamField>
+
+<ParamField path="shareId" type="string" required>
+  The UUID of the share record to update.
+</ParamField>
+
+### Body
+
+<ParamField body="permission" type="string" required>
+  The new permission level. Must be one of:
+  - `viewer` — read-only access.
+  - `editor` — read and write access.
+</ParamField>
+
+## Response
+
+Returns the updated share object.
+
+<ResponseField name="id" type="string" required>
+  Unique identifier for the share record (UUID).
+</ResponseField>
+
+<ResponseField name="noteId" type="string" required>
+  UUID of the shared note.
+</ResponseField>
+
+<ResponseField name="sharedWithUserId" type="string" required>
+  UUID of the user the note is shared with.
+</ResponseField>
+
+<ResponseField name="permission" type="string" required>
+  Updated permission level: `viewer` or `editor`.
+</ResponseField>
+
+<ResponseField name="sharedByUserId" type="string" required>
+  UUID of the user who originally created the share.
+</ResponseField>
+
+<ResponseField name="isDeleted" type="boolean" required>
+  Whether the share is revoked.
+</ResponseField>
+
+<ResponseField name="createdAt" type="string" required>
+  ISO 8601 timestamp of original creation.
+</ResponseField>
+
+<ResponseField name="updatedAt" type="string" required>
+  ISO 8601 timestamp reflecting this update.
+</ResponseField>
+
+## Example
+
+<CodeGroup>
+
+```bash cURL
+curl --request PATCH \
+  --url https://your-instance.example.com/api/notes/n1b2c3d4-e5f6-7890-abcd-ef1234567890/shares/s1b2c3d4-e5f6-7890-abcd-ef1234567890 \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "permission": "viewer"
+  }'
+```
+
+</CodeGroup>
+
+```json Response
+{
+  "id": "s1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "noteId": "n1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "sharedWithUserId": "u2b3c4d5-e6f7-8901-bcde-f01234567891",
+  "permission": "viewer",
+  "sharedByUserId": "u1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "isDeleted": false,
+  "createdAt": "2025-03-14T10:00:00.000Z",
+  "updatedAt": "2025-03-14T12:30:00.000Z"
+}
+```

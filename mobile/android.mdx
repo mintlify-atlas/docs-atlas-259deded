@@ -1,0 +1,68 @@
+---
+title: "Android app"
+description: "Download and use the Anchor Android app"
+---
+
+## Download
+
+The Anchor Android app is distributed as APK files through GitHub Releases.
+
+<Steps>
+  <Step title="Go to the releases page">
+    Visit [github.com/zhfahim/anchor/releases](https://github.com/zhfahim/anchor/releases) and find the latest release.
+  </Step>
+  <Step title="Choose an APK">
+    Two APK types are available:
+
+    - **Universal APK** (`anchor-{version}.apk`) — works on all Android devices. This is the recommended option for most users.
+    - **Architecture-specific APKs** — smaller file sizes targeting a specific CPU architecture (arm64-v8a, armeabi-v7a, x86_64). Use these only if you know your device's architecture.
+  </Step>
+  <Step title="Install the APK">
+    Android blocks installations from outside the Play Store by default. When prompted, enable **Install from unknown sources** (or **Install unknown apps**) for your browser or file manager, then open the downloaded APK to install it.
+  </Step>
+</Steps>
+
+<Note>
+  An iOS app is not currently available.
+</Note>
+
+## Connecting to your instance
+
+When you open the app for the first time, you are prompted for your Anchor server URL. Enter the full URL including the scheme, for example:
+
+```
+https://notes.example.com
+```
+
+The app stores this URL locally. You can change it later from the app settings.
+
+## Offline capabilities
+
+The Android app uses the same offline-first architecture as the web app. Notes are stored in a local SQLite database (powered by Drift) on your device, so you can create, edit, and browse notes without a network connection. Changes made offline are queued and synced to your server as soon as a connection becomes available.
+
+## OIDC login on mobile
+
+To use OIDC single sign-on in the Android app, your OIDC provider must be configured as a **public client** (PKCE flow — no client secret). Add the following redirect URI to your OIDC provider's allowed redirect URIs:
+
+```
+anchor://oidc/callback
+```
+
+<Info>
+  The PKCE redirect URI is separate from the web callback URL (`{APP_URL}/api/auth/oidc/callback`). Both must be registered if you use OIDC on web and mobile.
+</Info>
+
+## Syncing
+
+The app monitors network connectivity using the `connectivity_plus` package. When a connection is detected, it automatically syncs any pending local changes to the server and pulls down remote updates. No manual action is required.
+
+## Features available on mobile
+
+The Android app supports the full core feature set:
+
+- **Notes** — create, read, update, and delete notes with rich text editing (bold, italic, underline, headings, lists, checkboxes)
+- **Tags** — create and assign tags with custom colors to organize notes
+- **Pin, archive, and trash** — pin important notes, archive notes for later, and soft-delete to trash with recovery
+- **Search** — search notes locally by title or content
+- **Note sharing** — share notes with other users as viewer or editor
+- **Automatic sync** — changes sync across devices when online

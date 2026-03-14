@@ -1,0 +1,155 @@
+---
+title: "Update profile"
+description: "Update your name, email, and profile image"
+---
+
+<Info>
+  All requests to these endpoints require an `Authorization: Bearer <token>` header.
+</Info>
+
+## Update profile details
+
+**PATCH** `/api/auth/profile`
+
+Updates the authenticated user's profile information.
+
+### Headers
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token. Example: `Bearer eyJhbGci...`
+</ParamField>
+
+<ParamField header="Content-Type" type="string" required>
+  Must be `application/json`.
+</ParamField>
+
+### Body
+
+<ParamField body="name" type="string">
+  Updated display name. Maximum 100 characters. Leading and trailing whitespace is trimmed automatically. Omit to leave the current name unchanged.
+</ParamField>
+
+### Response
+
+Returns the updated user object.
+
+<ResponseField name="id" type="string" required>
+  Unique identifier (UUID).
+</ResponseField>
+
+<ResponseField name="email" type="string" required>
+  The user's email address.
+</ResponseField>
+
+<ResponseField name="name" type="string" required>
+  Updated display name.
+</ResponseField>
+
+<ResponseField name="profileImage" type="string">
+  Profile image URL, or `null`.
+</ResponseField>
+
+<ResponseField name="isAdmin" type="boolean" required>
+  Whether the user has administrator privileges.
+</ResponseField>
+
+<ResponseField name="status" type="string" required>
+  Account status: `active` or `pending`.
+</ResponseField>
+
+<ResponseField name="oidcSubject" type="string">
+  OIDC subject identifier, or `null`.
+</ResponseField>
+
+<ResponseField name="createdAt" type="string" required>
+  ISO 8601 creation timestamp.
+</ResponseField>
+
+<ResponseField name="updatedAt" type="string" required>
+  ISO 8601 timestamp reflecting this update.
+</ResponseField>
+
+### Example
+
+<CodeGroup>
+
+```bash cURL
+curl --request PATCH \
+  --url https://your-instance.example.com/api/auth/profile \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "name": "Alex J."
+  }'
+```
+
+</CodeGroup>
+
+---
+
+## Upload profile image
+
+**POST** `/api/auth/profile/image`
+
+Uploads a new profile image for the authenticated user. Replaces any existing profile image.
+
+### Headers
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token. Example: `Bearer eyJhbGci...`
+</ParamField>
+
+<ParamField header="Content-Type" type="string" required>
+  Must be `multipart/form-data`.
+</ParamField>
+
+### Body
+
+<ParamField body="image" type="file" required>
+  The image file to upload.
+  - **Allowed types:** JPEG, PNG, WebP
+  - **Maximum size:** 5 MB
+</ParamField>
+
+<Warning>
+  Files larger than 5 MB or with an unsupported MIME type will be rejected with a `400 Bad Request` error.
+</Warning>
+
+### Example
+
+<CodeGroup>
+
+```bash cURL
+curl --request POST \
+  --url https://your-instance.example.com/api/auth/profile/image \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' \
+  --form 'image=@/path/to/photo.jpg'
+```
+
+</CodeGroup>
+
+---
+
+## Remove profile image
+
+**DELETE** `/api/auth/profile/image`
+
+Removes the authenticated user's profile image. After this call, `profileImage` will be `null`.
+
+### Headers
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token. Example: `Bearer eyJhbGci...`
+</ParamField>
+
+### Example
+
+<CodeGroup>
+
+```bash cURL
+curl --request DELETE \
+  --url https://your-instance.example.com/api/auth/profile/image \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+```
+
+</CodeGroup>

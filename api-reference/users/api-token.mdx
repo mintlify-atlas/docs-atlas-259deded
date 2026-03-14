@@ -1,0 +1,139 @@
+---
+title: "API tokens"
+description: "Manage long-lived API tokens for programmatic access"
+---
+
+API tokens are long-lived credentials designed for scripts, integrations, and automation — situations where a short-lived JWT and its refresh flow would be impractical.
+
+## API tokens vs. JWT
+
+| | JWT | API token |
+|---|---|---|
+| Lifetime | Short-lived (minutes/hours) | Long-lived (until revoked) |
+| Rotation | Automatic via refresh token | Manual regeneration |
+| Use case | Interactive sessions | Scripts, integrations, CI/CD |
+| Revocation | Refresh token rotation | Explicit delete or regenerate |
+
+<Info>
+  Use an API token exactly like a JWT: pass it as the `Authorization: Bearer <api_token>` header on any authenticated request.
+</Info>
+
+---
+
+## Get API token
+
+**GET** `/api/auth/api-token`
+
+Returns the current API token for the authenticated user. If no token exists yet, one is created automatically.
+
+### Headers
+
+<ParamField header="Authorization" type="string" required>
+  Bearer JWT. Example: `Bearer eyJhbGci...`
+</ParamField>
+
+### Response
+
+<ResponseField name="token" type="string" required>
+  The API token string. Use this value as the bearer token for API requests from scripts and integrations.
+</ResponseField>
+
+### Example
+
+<CodeGroup>
+
+```bash cURL
+curl --request GET \
+  --url https://your-instance.example.com/api/auth/api-token \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+```
+
+</CodeGroup>
+
+```json Response
+{
+  "token": "anch_a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0"
+}
+```
+
+---
+
+## Regenerate API token
+
+**POST** `/api/auth/api-token/regenerate`
+
+Generates a new API token and immediately invalidates the previous one. Use this to rotate credentials after a suspected exposure.
+
+### Headers
+
+<ParamField header="Authorization" type="string" required>
+  Bearer JWT. Example: `Bearer eyJhbGci...`
+</ParamField>
+
+<Warning>
+  Regenerating your API token immediately revokes the old one. Any scripts or integrations using the previous token will stop working and must be updated with the new token.
+</Warning>
+
+### Response
+
+<ResponseField name="token" type="string" required>
+  The new API token. Update all clients that were using the old token.
+</ResponseField>
+
+### Example
+
+<CodeGroup>
+
+```bash cURL
+curl --request POST \
+  --url https://your-instance.example.com/api/auth/api-token/regenerate \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+```
+
+</CodeGroup>
+
+```json Response
+{
+  "token": "anch_z9y8x7w6v5u4t3s2r1q0p9o8n7m6l5k4j3i2h1"
+}
+```
+
+---
+
+## Revoke API token
+
+**DELETE** `/api/auth/api-token`
+
+Permanently revokes the current API token. After this call, the token can no longer be used for authentication. To get a new token, call the [get API token](#get-api-token) endpoint again.
+
+### Headers
+
+<ParamField header="Authorization" type="string" required>
+  Bearer JWT. Example: `Bearer eyJhbGci...`
+</ParamField>
+
+### Example
+
+<CodeGroup>
+
+```bash cURL
+curl --request DELETE \
+  --url https://your-instance.example.com/api/auth/api-token \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+```
+
+</CodeGroup>
+
+---
+
+## Using your API token
+
+Once you have a token, use it as a bearer token on any API request:
+
+```bash example script
+curl --request GET \
+  --url https://your-instance.example.com/api/tags \
+  --header 'Authorization: Bearer anch_a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0'
+```
+
+API tokens authenticate through the same guard as JWTs, so they work with every endpoint that accepts `Authorization: Bearer`.

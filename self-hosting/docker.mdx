@@ -1,0 +1,130 @@
+---
+title: "Docker deployment"
+description: "Deploy Anchor on your own server using Docker"
+---
+
+Anchor ships as a single Docker image that bundles the API server, web frontend, and an embedded PostgreSQL database. You can be up and running in minutes with no external dependencies.
+
+## Option 1: Pre-built image (recommended)
+
+The fastest way to self-host Anchor is to pull the pre-built image from the GitHub Container Registry.
+
+<Steps>
+  <Step title="Create a docker-compose.yml file">
+    Create a new file called `docker-compose.yml` with the following content:
+
+    ```yaml docker-compose.yml
+    services:
+      anchor:
+        image: ghcr.io/zhfahim/anchor:latest
+        container_name: anchor
+        restart: unless-stopped
+        ports:
+          - "3000:3000"
+        volumes:
+          - anchor_data:/data
+
+    volumes:
+      anchor_data:
+    ```
+  </Step>
+
+  <Step title="Start the container">
+    ```bash
+    docker compose up -d
+    ```
+  </Step>
+
+  <Step title="Access the app">
+    Open [http://localhost:3000](http://localhost:3000) in your browser. On first launch, you will be prompted to create an admin account.
+  </Step>
+</Steps>
+
+<Note>
+  Most users can skip environment variable configuration — the defaults work out of the box. See [Configuration](/self-hosting/configuration) if you need to customise the setup.
+</Note>
+
+## Option 2: Build from source
+
+If you want to customise the image or contribute to Anchor, you can build it locally.
+
+<Steps>
+  <Step title="Clone the repository">
+    ```bash
+    git clone https://github.com/zhfahim/anchor.git
+    cd anchor
+    ```
+  </Step>
+
+  <Step title="Start the container">
+    The `docker-compose.yml` in the repository is configured to build the image from source automatically:
+
+    ```bash
+    docker compose up -d
+    ```
+
+    The build process compiles the NestJS API server and the Next.js web frontend, then packages them together with PostgreSQL into a single runtime image.
+  </Step>
+</Steps>
+
+<Note>
+  The source `docker-compose.yml` uses the embedded PostgreSQL database with default credentials. See [Configuration](/self-hosting/configuration) if you need to connect to an external database.
+</Note>
+
+## Updating Anchor
+
+To update to the latest version, pull the new image and restart the container:
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+Anchor runs database migrations automatically on startup, so your data is preserved across updates.
+
+<Warning>
+  Always back up your data before updating. See [Database](/self-hosting/database) for backup instructions.
+</Warning>
+
+## Data persistence
+
+Anchor stores all persistent data — the PostgreSQL database files, the auto-generated `JWT_SECRET`, and any other runtime state — inside the `/data` directory inside the container. This directory is mapped to the named Docker volume `anchor_data`.
+
+As long as the `anchor_data` volume exists, your data survives container restarts, recreations, and image updates.
+
+```yaml
+volumes:
+  anchor_data:/data
+```
+
+See [Database](/self-hosting/database) for details on backups and volume management.
+
+## Port mapping
+
+By default, Anchor listens on port `3000` inside the container, mapped to port `3000` on the host (`3000:3000`).
+
+To serve Anchor on a different host port, change the left side of the mapping:
+
+```yaml docker-compose.yml
+ports:
+  - "8080:3000"  # serve on host port 8080
+```
+
+If you are placing Anchor behind a reverse proxy (nginx, Caddy, Traefik, etc.), set `APP_URL` to your public URL so OIDC callbacks work correctly:
+
+```yaml docker-compose.yml
+services:
+  anchor:
+    image: ghcr.io/zhfahim/anchor:latest
+    container_name: anchor
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - APP_URL=https://notes.example.com
+    volumes:
+      - anchor_data:/data
+
+volumes:
+  anchor_data:
+```

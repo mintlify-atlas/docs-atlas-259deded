@@ -1,0 +1,88 @@
+---
+title: "Get current user"
+description: "Retrieve the authenticated user's profile"
+---
+
+<Info>
+  All requests to this endpoint require an `Authorization: Bearer <token>` header.
+</Info>
+
+## Request
+
+**GET** `/api/auth/me`
+
+Returns the full profile of the currently authenticated user based on the supplied bearer token.
+
+### Headers
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token (JWT or API token). Example: `Bearer eyJhbGci...`
+</ParamField>
+
+## Response
+
+<ResponseField name="id" type="string" required>
+  Unique identifier for the user (UUID).
+</ResponseField>
+
+<ResponseField name="email" type="string" required>
+  The user's email address.
+</ResponseField>
+
+<ResponseField name="name" type="string" required>
+  The user's display name.
+</ResponseField>
+
+<ResponseField name="profileImage" type="string">
+  URL of the user's profile image. `null` if no image has been uploaded.
+</ResponseField>
+
+<ResponseField name="isAdmin" type="boolean" required>
+  Whether the user has administrator privileges.
+</ResponseField>
+
+<ResponseField name="status" type="string" required>
+  Account status. One of `active` or `pending`.
+</ResponseField>
+
+<ResponseField name="oidcSubject" type="string">
+  The subject identifier from an OIDC provider if the account was created via SSO. `null` for password-based accounts.
+</ResponseField>
+
+<ResponseField name="createdAt" type="string" required>
+  ISO 8601 timestamp of when the account was created.
+</ResponseField>
+
+<ResponseField name="updatedAt" type="string" required>
+  ISO 8601 timestamp of when the account was last updated.
+</ResponseField>
+
+<Note>
+  The `password` field is never returned by this endpoint even though it exists on the underlying model.
+</Note>
+
+## Example
+
+<CodeGroup>
+
+```bash cURL
+curl --request GET \
+  --url https://your-instance.example.com/api/auth/me \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+```
+
+</CodeGroup>
+
+```json Response
+{
+  "id": "u1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "email": "alex@example.com",
+  "name": "Alex Johnson",
+  "profileImage": "https://your-instance.example.com/uploads/profiles/u1b2c3d4.jpg",
+  "isAdmin": false,
+  "status": "active",
+  "oidcSubject": null,
+  "createdAt": "2025-01-01T00:00:00.000Z",
+  "updatedAt": "2025-03-01T08:00:00.000Z"
+}
+```

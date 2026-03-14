@@ -1,0 +1,116 @@
+---
+title: "Get note"
+description: "Retrieve a single note by ID"
+---
+
+<Info>
+  All requests require an `Authorization: Bearer <token>` header.
+</Info>
+
+**GET** `/api/notes/:id`
+
+Retrieves a single note by its ID. You can retrieve notes you own as well as notes that have been shared with you. The response includes the full tags list and share details.
+
+<Warning>
+  Returns `404 Not Found` if the note does not exist, has been permanently deleted (`state: deleted`), or does not belong to you and has not been shared with you.
+</Warning>
+
+## Path parameters
+
+<ParamField path="id" type="string" required>
+  The UUID of the note to retrieve.
+</ParamField>
+
+## Response
+
+<ResponseField name="id" type="string">
+  UUID of the note.
+</ResponseField>
+
+<ResponseField name="title" type="string">
+  The title of the note.
+</ResponseField>
+
+<ResponseField name="content" type="string | null">
+  The rich text content of the note.
+</ResponseField>
+
+<ResponseField name="isPinned" type="boolean">
+  Whether the note is pinned.
+</ResponseField>
+
+<ResponseField name="isArchived" type="boolean">
+  Whether the note is archived.
+</ResponseField>
+
+<ResponseField name="background" type="string | null">
+  The background color or pattern identifier.
+</ResponseField>
+
+<ResponseField name="state" type="string">
+  The lifecycle state of the note: `active`, `trashed`, or `deleted`.
+</ResponseField>
+
+<ResponseField name="createdAt" type="string">
+  ISO 8601 datetime when the note was created.
+</ResponseField>
+
+<ResponseField name="updatedAt" type="string">
+  ISO 8601 datetime when the note was last updated.
+</ResponseField>
+
+<ResponseField name="userId" type="string">
+  UUID of the user who owns the note.
+</ResponseField>
+
+<ResponseField name="tags" type="array">
+  Tags associated with the note.
+  <Expandable title="Tag object">
+    <ResponseField name="id" type="string">
+      UUID of the tag.
+    </ResponseField>
+    <ResponseField name="name" type="string">
+      Display name of the tag.
+    </ResponseField>
+    <ResponseField name="color" type="string | null">
+      Optional color associated with the tag.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="sharedWith" type="array">
+  Share records for this note. Only present for notes you own.
+  <Expandable title="NoteShare object">
+    <ResponseField name="id" type="string">
+      UUID of the share record.
+    </ResponseField>
+    <ResponseField name="noteId" type="string">
+      UUID of the note being shared.
+    </ResponseField>
+    <ResponseField name="sharedWithUserId" type="string">
+      UUID of the user the note is shared with.
+    </ResponseField>
+    <ResponseField name="sharedByUserId" type="string">
+      UUID of the user who created the share.
+    </ResponseField>
+    <ResponseField name="permission" type="string">
+      The permission level granted: `viewer` or `editor`.
+    </ResponseField>
+    <ResponseField name="isDeleted" type="boolean">
+      Whether the share has been revoked.
+    </ResponseField>
+    <ResponseField name="createdAt" type="string">
+      ISO 8601 datetime when the share was created.
+    </ResponseField>
+    <ResponseField name="updatedAt" type="string">
+      ISO 8601 datetime when the share was last updated.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+```bash Get a note
+curl https://api.example.com/api/notes/a1b2c3d4-1234-5678-abcd-ef0123456789 \
+  -H "Authorization: Bearer <token>"
+```
+</CodeGroup>

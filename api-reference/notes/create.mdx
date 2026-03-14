@@ -1,0 +1,122 @@
+---
+title: "Create note"
+description: "Create a new note"
+---
+
+<Info>
+  All requests require an `Authorization: Bearer <token>` header.
+</Info>
+
+**POST** `/api/notes`
+
+Creates a new note owned by the authenticated user. The note is created with `state` set to `active`.
+
+## Request body
+
+<ParamField body="title" type="string" required>
+  The title of the note. Cannot be empty.
+</ParamField>
+
+<ParamField body="content" type="string">
+  The rich text content of the note.
+</ParamField>
+
+<ParamField body="isPinned" type="boolean">
+  Whether to pin the note. Defaults to `false`.
+</ParamField>
+
+<ParamField body="isArchived" type="boolean">
+  Whether to create the note in an archived state. Defaults to `false`.
+</ParamField>
+
+<ParamField body="background" type="string">
+  A color or pattern identifier for the note background.
+</ParamField>
+
+<ParamField body="tagIds" type="string[]">
+  An array of existing tag UUIDs to associate with the note.
+</ParamField>
+
+## Response
+
+Returns the created Note object.
+
+<ResponseField name="id" type="string">
+  The UUID assigned to the new note.
+</ResponseField>
+
+<ResponseField name="title" type="string">
+  The title of the note.
+</ResponseField>
+
+<ResponseField name="content" type="string | null">
+  The rich text content of the note.
+</ResponseField>
+
+<ResponseField name="isPinned" type="boolean">
+  Whether the note is pinned.
+</ResponseField>
+
+<ResponseField name="isArchived" type="boolean">
+  Whether the note is archived.
+</ResponseField>
+
+<ResponseField name="background" type="string | null">
+  The background color or pattern identifier.
+</ResponseField>
+
+<ResponseField name="state" type="string">
+  Always `active` for a newly created note.
+</ResponseField>
+
+<ResponseField name="createdAt" type="string">
+  ISO 8601 datetime when the note was created.
+</ResponseField>
+
+<ResponseField name="updatedAt" type="string">
+  ISO 8601 datetime when the note was last updated.
+</ResponseField>
+
+<ResponseField name="userId" type="string">
+  UUID of the authenticated user who created the note.
+</ResponseField>
+
+<ResponseField name="tags" type="array">
+  Tags associated with the note.
+  <Expandable title="Tag object">
+    <ResponseField name="id" type="string">
+      UUID of the tag.
+    </ResponseField>
+    <ResponseField name="name" type="string">
+      Display name of the tag.
+    </ResponseField>
+    <ResponseField name="color" type="string | null">
+      Optional color associated with the tag.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+```bash Create a basic note
+curl -X POST https://api.example.com/api/notes \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Weekly planning",
+    "content": "<p>Things to do this week...</p>"
+  }'
+```
+
+```bash Create a pinned note with tags
+curl -X POST https://api.example.com/api/notes \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Important reminder",
+    "content": "<p>Do not forget this.</p>",
+    "isPinned": true,
+    "background": "yellow",
+    "tagIds": ["b3d2a1f0-1234-5678-abcd-ef0123456789"]
+  }'
+```
+</CodeGroup>

@@ -1,0 +1,51 @@
+---
+title: "Introduction"
+description: "Anchor is an offline-first, self-hostable note-taking application for web and Android"
+---
+
+Anchor is a note-taking application built around three principles: your data stays on your infrastructure, notes are always editable whether or not you have an internet connection, and the interface stays fast and simple across both web and mobile.
+
+Notes are stored locally in the client and synced to your self-hosted server when a connection is available. There are no third-party clouds, no subscriptions, and no accounts you don't control.
+
+## Why Anchor
+
+**Data ownership.** Anchor runs on your own server. Your notes never touch infrastructure you don't control. The server is distributed as a single Docker image, so deployment takes minutes.
+
+**Works offline.** The web app and Android client both maintain a local database. You can create, edit, and organize notes without any network access. Changes sync automatically once you're back online.
+
+**No subscription.** Anchor is free and open source under the AGPL v3 license. There is no hosted tier, no usage limits, and no vendor lock-in.
+
+**Multi-user ready.** Anchor includes an admin panel for managing users, controlling registration, and monitoring the instance. Notes can be shared with other users on the same server with per-share permission levels.
+
+## Architecture
+
+Anchor is composed of three layers:
+
+| Layer | Technology | Role |
+|---|---|---|
+| Backend | NestJS, PostgreSQL, Prisma | REST API, auth, sync, data persistence |
+| Web client | Next.js, TypeScript | Browser-based note editor and management UI |
+| Mobile client | Flutter | Android app with local-first storage and sync |
+
+The backend and web client are packaged together in a single Docker image. The mobile app is distributed separately as an APK from the GitHub releases page.
+
+<Info>
+  By default, Anchor uses an embedded database so you don't need to provision a separate PostgreSQL instance. You can connect an external Postgres database if you prefer by setting the `PG_*` environment variables.
+</Info>
+
+## Quick links
+
+<Columns cols={2}>
+  <Card title="Self-hosting with Docker" icon="docker" href="/self-hosting/docker">
+    Deploy Anchor on your own server using the pre-built Docker image or build from source.
+  </Card>
+  <Card title="OIDC authentication" icon="key" href="/authentication/oidc">
+    Configure sign-in with Pocket ID, Authelia, Authentik, Keycloak, or any standard OIDC provider.
+  </Card>
+  <Card title="API reference" icon="code" href="/api-reference/overview">
+    Explore the REST API that powers note sync, sharing, tags, and user management.
+  </Card>
+  <Card title="Mobile app" icon="mobile" href="/mobile/android">
+    Download the Android APK and configure it to connect to your Anchor instance.
+  </Card>
+</Columns>

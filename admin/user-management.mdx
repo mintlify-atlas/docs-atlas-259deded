@@ -1,0 +1,154 @@
+---
+title: "User management"
+description: "Create, edit, approve, and delete users in Anchor"
+---
+
+## User statuses
+
+Every user has a `status` field that is one of two values defined in the `UserStatus` enum:
+
+| Status | Meaning |
+|---|---|
+| `active` | The user can log in and use the app normally. |
+| `pending` | The user registered but has not yet been approved by an admin. Access is blocked until approval. |
+
+Users are created with `pending` status only when registration mode is set to `review`. Users created directly by an admin through the admin panel are always created as `active`.
+
+## Listing users
+
+```http
+GET /api/admin/users?skip=0&take=50
+```
+
+Returns a paginated list of all users, ordered by creation date (newest first). Each user object includes their note and tag counts, and an `authMethod` field (`"local"` or `"oidc"`).
+
+| Query param | Default | Description |
+|---|---|---|
+| `skip` | `0` | Number of records to skip (for pagination) |
+| `take` | `50` | Maximum number of records to return |
+
+The response shape:
+
+```json
+{
+  "users": [...],
+  "total": 42,
+  "skip": 0,
+  "take": 50
+}
+```
+
+## Creating users
+
+```http
+POST /api/admin/users
+```
+
+Admins can create accounts directly — useful when registration is disabled or you want to provision accounts ahead of time. Admin-created users are immediately `active`.
+
+Request body:
+
+```json
+{
+  "email": "user@example.com",
+  "password": "minimum8chars",
+  "name": "Jane Smith"
+}
+```
+
+| Field | Required | Constraints |
+|---|---|---|
+| `email` | Yes | Valid email address, must be unique |
+| `password` | Yes | Minimum 8 characters |
+| `name` | Yes | Non-empty string, maximum 100 characters |
+
+## Updating users
+
+```http
+PATCH /api/admin/users/:id
+```
+
+Update a user's name, email, or admin status. All fields are optional.
+
+Request body:
+
+```json
+{
+  "name": "Jane Doe",
+  "email": "jane@example.com",
+  "isAdmin": true
+}
+```
+
+<Warning>
+  You cannot remove `isAdmin` from your own account, and you cannot demote the last remaining admin. The API will return a `400 Bad Request` in both cases.
+</Warning>
+
+## Resetting passwords
+
+```http
+POST /api/admin/users/:id/reset-password
+```
+
+Request body:
+
+```json
+{
+  "newPassword": "newpassword123"
+}
+```
+
+The `newPassword` field is optional. If you omit it, the server generates a cryptographically random 16-character password and returns it in the response:
+
+```json
+{
+  "newPassword": "aB3xK9mNpQ7rLvTw",
+  "message": "Password reset successfully. New password generated."
+}
+```
+
+If you supply `newPassword`, the response will not include the password field — only a confirmation message.
+
+<Note>
+  Password reset only applies to users with local (non-OIDC) accounts. OIDC users authenticate through their identity provider and do not have a local password.
+</Note>
+
+## Deleting users
+
+```http
+DELETE /api/admin/users/:id
+```
+
+Permanently deletes a user account. All of the user's notes, tags, and shares are cascade-deleted by the database constraint.
+
+<Warning>
+  This action is irreversible. You cannot delete the last admin user.
+</Warning>
+
+## Pending users queue
+
+```http
+GET /api/admin/users/pending
+```
+
+Returns all users with `status: "pending"`, ordered by registration date. This endpoint is most relevant when registration mode is set to `review`.
+
+### Approving a user
+
+```http
+POST /api/admin/users/:id/approve
+```
+
+Sets the user's status from `pending` to `active`, granting them access to the app.
+
+### Rejecting a user
+
+```http
+POST /api/admin/users/:id/reject
+```
+
+Deletes the pending user account. The registration is discarded and the user is permanently removed.
+
+<Info>
+  Approve and reject actions only work on users with `status: "pending"`. Calling them on an active user returns `400 Bad Request`.
+</Info>

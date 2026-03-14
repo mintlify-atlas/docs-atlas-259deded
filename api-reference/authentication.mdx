@@ -1,0 +1,363 @@
+---
+title: "Authentication"
+description: "How to authenticate with the Anchor API"
+---
+
+The Anchor API uses JWT-based authentication. A typical session looks like this:
+
+<Steps>
+  <Step title="Check registration mode">
+    Confirm that new accounts are accepted before sending a registration request.
+  </Step>
+  <Step title="Register or log in">
+    Exchange credentials for an `access_token` and a `refresh_token`.
+  </Step>
+  <Step title="Call authenticated endpoints">
+    Include the `access_token` as a Bearer token in every request.
+  </Step>
+  <Step title="Refresh when the access token expires">
+    Use the `refresh_token` to get a new `access_token` without re-entering credentials.
+  </Step>
+  <Step title="Log out">
+    Revoke the `refresh_token` to end the session.
+  </Step>
+</Steps>
+
+---
+
+## Registration
+
+### Check registration mode
+
+```
+GET /api/auth/registration-mode
+```
+
+Returns the current sign-up policy. Call this before attempting to register so your client can surface the right message to the user.
+
+**Response**
+
+<ResponseField name="mode" type="string" required>
+  The current registration policy. One of `"enabled"`, `"disabled"`, or `"review"`.
+</ResponseField>
+
+```json
+{ "mode": "enabled" }
+```
+
+| Mode | Meaning |
+|------|---------|
+| `enabled` | Any visitor can register immediately. |
+| `disabled` | Registration is closed. |
+| `review` | Registration is open but new accounts are placed in a pending state until an admin approves them. |
+
+---
+
+### Register
+
+```
+POST /api/auth/register
+```
+
+Create a new user account.
+
+**Request body**
+
+<ParamField body="email" type="string" required>
+  A valid email address. Used to log in and must be unique across all accounts.
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  Account password. Minimum 8 characters.
+</ParamField>
+
+<ParamField body="name" type="string" required>
+  Display name for the account. Maximum 100 characters. Leading and trailing whitespace is stripped.
+</ParamField>
+
+**Response**
+
+<ResponseField name="access_token" type="string" required>
+  Short-lived JWT. Include this in the `Authorization` header for subsequent requests.
+</ResponseField>
+
+<ResponseField name="refresh_token" type="string" required>
+  Long-lived token used to obtain a new `access_token` after it expires.
+</ResponseField>
+
+<ResponseField name="user" type="object" required>
+  <Expandable title="properties">
+    <ResponseField name="id" type="string">Unique user identifier.</ResponseField>
+    <ResponseField name="email" type="string">User's email address.</ResponseField>
+    <ResponseField name="name" type="string">User's display name.</ResponseField>
+    <ResponseField name="profileImage" type="string">URL of the user's profile image, or `null`.</ResponseField>
+    <ResponseField name="isAdmin" type="boolean">Whether the user has admin privileges.</ResponseField>
+    <ResponseField name="status" type="string">Account status: `"active"` or `"pending"`.</ResponseField>
+    <ResponseField name="createdAt" type="string">ISO 8601 timestamp of account creation.</ResponseField>
+    <ResponseField name="updatedAt" type="string">ISO 8601 timestamp of last update.</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<Note>
+  When registration mode is `"review"`, the returned `user.status` is `"pending"`. Requests made with the returned tokens will be rejected with `401 Unauthorized` until an admin approves the account.
+</Note>
+
+<CodeGroup>
+
+```bash cURL
+curl --request POST \
+  --url http://localhost:3001/api/auth/register \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "email": "alice@example.com",
+    "password": "supersecret",
+    "name": "Alice"
+  }'
+```
+
+```json Response
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user": {
+    "id": "clx1a2b3c0000abc123def456",
+    "email": "alice@example.com",
+    "name": "Alice",
+    "profileImage": null,
+    "isAdmin": false,
+    "status": "active",
+    "createdAt": "2026-03-14T10:00:00.000Z",
+    "updatedAt": "2026-03-14T10:00:00.000Z"
+  }
+}
+```
+
+</CodeGroup>
+
+---
+
+## Login
+
+```
+POST /api/auth/login
+```
+
+Authenticate with an email and password.
+
+**Request body**
+
+<ParamField body="email" type="string" required>
+  The account's email address.
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  The account's password.
+</ParamField>
+
+**Response**
+
+Returns the same shape as [Register](#register): `access_token`, `refresh_token`, and `user`.
+
+<CodeGroup>
+
+```bash cURL
+curl --request POST \
+  --url http://localhost:3001/api/auth/login \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "email": "alice@example.com",
+    "password": "supersecret"
+  }'
+```
+
+```json Response
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user": {
+    "id": "clx1a2b3c0000abc123def456",
+    "email": "alice@example.com",
+    "name": "Alice",
+    "profileImage": null,
+    "isAdmin": false,
+    "status": "active",
+    "createdAt": "2026-03-14T10:00:00.000Z",
+    "updatedAt": "2026-03-14T10:00:00.000Z"
+  }
+}
+```
+
+</CodeGroup>
+
+---
+
+## Token management
+
+### Refresh the access token
+
+```
+POST /api/auth/refresh
+```
+
+Exchange a valid `refresh_token` for a new `access_token` and `refresh_token` pair. The previous refresh token is invalidated.
+
+**Request body**
+
+<ParamField body="refresh_token" type="string" required>
+  The refresh token obtained from login or registration.
+</ParamField>
+
+**Response**
+
+<ResponseField name="access_token" type="string" required>
+  New short-lived JWT.
+</ResponseField>
+
+<ResponseField name="refresh_token" type="string" required>
+  New refresh token. Store this and discard the old one.
+</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl --request POST \
+  --url http://localhost:3001/api/auth/refresh \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  }'
+```
+
+```json Response
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+</CodeGroup>
+
+---
+
+### Log out
+
+```
+POST /api/auth/logout
+```
+
+Revoke a refresh token. After this call the token can no longer be used to issue new access tokens.
+
+**Request body**
+
+<ParamField body="refreshToken" type="string">
+  The refresh token to revoke. Optional — if omitted, the request completes without error.
+</ParamField>
+
+<CodeGroup>
+
+```bash cURL
+curl --request POST \
+  --url http://localhost:3001/api/auth/logout \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  }'
+```
+
+</CodeGroup>
+
+---
+
+## Using tokens in requests
+
+Pass your `access_token` (or API token) as a Bearer token in the `Authorization` header of every authenticated request:
+
+```bash
+Authorization: Bearer <token>
+```
+
+**Example — fetch your profile:**
+
+<CodeGroup>
+
+```bash cURL
+curl --request GET \
+  --url http://localhost:3001/api/auth/me \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+```
+
+</CodeGroup>
+
+<Note>
+  JWT access tokens and API tokens are passed identically. The server distinguishes them internally — from your client's perspective the header format is the same for both.
+</Note>
+
+---
+
+## API tokens
+
+API tokens are long-lived credentials tied to your account. They are useful for scripts, automation, and integrations that cannot participate in the JWT refresh cycle.
+
+<Warning>
+  Treat API tokens like passwords. Store them securely and regenerate them immediately if they are compromised. Regenerating an API token permanently revokes the previous one.
+</Warning>
+
+### Get your API token
+
+```
+GET /api/auth/api-token
+```
+
+Requires a valid JWT access token in the `Authorization` header.
+
+Returns your current API token. If no token exists yet, one is created.
+
+<CodeGroup>
+
+```bash cURL
+curl --request GET \
+  --url http://localhost:3001/api/auth/api-token \
+  --header 'Authorization: Bearer <access_token>'
+```
+
+</CodeGroup>
+
+---
+
+### Regenerate your API token
+
+```
+POST /api/auth/api-token/regenerate
+```
+
+Requires a valid JWT access token. Creates a new API token and immediately revokes the old one.
+
+<CodeGroup>
+
+```bash cURL
+curl --request POST \
+  --url http://localhost:3001/api/auth/api-token/regenerate \
+  --header 'Authorization: Bearer <access_token>'
+```
+
+</CodeGroup>
+
+---
+
+### Revoke your API token
+
+```
+DELETE /api/auth/api-token
+```
+
+Requires a valid JWT access token. Permanently revokes your API token. Any integrations using the revoked token will stop working immediately.
+
+<CodeGroup>
+
+```bash cURL
+curl --request DELETE \
+  --url http://localhost:3001/api/auth/api-token \
+  --header 'Authorization: Bearer <access_token>'
+```
+
+</CodeGroup>

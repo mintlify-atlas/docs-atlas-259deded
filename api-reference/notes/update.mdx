@@ -1,0 +1,155 @@
+---
+title: "Update note"
+description: "Update a note's content and properties"
+---
+
+<Info>
+  All requests require an `Authorization: Bearer <token>` header.
+</Info>
+
+## Update a note
+
+**PATCH** `/api/notes/:id`
+
+Updates one or more fields on a note. All body fields are optional — only the fields you include are changed. You must be the note owner or have `editor` permission on the note.
+
+<Note>
+  When you provide `tagIds`, the tag list is fully replaced with the new array. To remove all tags, pass an empty array `[]`.
+</Note>
+
+### Path parameters
+
+<ParamField path="id" type="string" required>
+  The UUID of the note to update.
+</ParamField>
+
+### Request body
+
+<ParamField body="title" type="string">
+  The updated title. Cannot be an empty string if provided.
+</ParamField>
+
+<ParamField body="content" type="string">
+  The updated rich text content.
+</ParamField>
+
+<ParamField body="isPinned" type="boolean">
+  Whether the note should be pinned.
+</ParamField>
+
+<ParamField body="isArchived" type="boolean">
+  Whether the note should be archived. Only the note owner can change this field.
+</ParamField>
+
+<ParamField body="background" type="string">
+  Updated background color or pattern identifier.
+</ParamField>
+
+<ParamField body="tagIds" type="string[]">
+  Replaces the note's tag list with the provided array of tag UUIDs.
+</ParamField>
+
+### Response
+
+Returns the updated Note object.
+
+<ResponseField name="id" type="string">
+  UUID of the note.
+</ResponseField>
+
+<ResponseField name="title" type="string">
+  The updated title.
+</ResponseField>
+
+<ResponseField name="content" type="string | null">
+  The updated content.
+</ResponseField>
+
+<ResponseField name="isPinned" type="boolean">
+  Whether the note is pinned.
+</ResponseField>
+
+<ResponseField name="isArchived" type="boolean">
+  Whether the note is archived.
+</ResponseField>
+
+<ResponseField name="background" type="string | null">
+  The background color or pattern identifier.
+</ResponseField>
+
+<ResponseField name="state" type="string">
+  The lifecycle state: `active`, `trashed`, or `deleted`.
+</ResponseField>
+
+<ResponseField name="createdAt" type="string">
+  ISO 8601 datetime when the note was created.
+</ResponseField>
+
+<ResponseField name="updatedAt" type="string">
+  ISO 8601 datetime when the note was last updated.
+</ResponseField>
+
+<ResponseField name="userId" type="string">
+  UUID of the note owner.
+</ResponseField>
+
+<ResponseField name="tags" type="array">
+  The note's current tag list after the update.
+  <Expandable title="Tag object">
+    <ResponseField name="id" type="string">
+      UUID of the tag.
+    </ResponseField>
+    <ResponseField name="name" type="string">
+      Display name of the tag.
+    </ResponseField>
+    <ResponseField name="color" type="string | null">
+      Optional color associated with the tag.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+```bash Update note content
+curl -X PATCH https://api.example.com/api/notes/a1b2c3d4-1234-5678-abcd-ef0123456789 \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Updated title",
+    "content": "<p>New content here.</p>"
+  }'
+```
+
+```bash Replace tags
+curl -X PATCH https://api.example.com/api/notes/a1b2c3d4-1234-5678-abcd-ef0123456789 \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tagIds": ["b3d2a1f0-1234-5678-abcd-ef0123456789"]
+  }'
+```
+</CodeGroup>
+
+---
+
+## Restore a trashed note
+
+**PATCH** `/api/notes/:id/restore`
+
+Moves a trashed note back to `active` state. You must be the note owner. Returns `404` if the note is not currently in the trash.
+
+### Path parameters
+
+<ParamField path="id" type="string" required>
+  The UUID of the trashed note to restore.
+</ParamField>
+
+### Response
+
+Returns the restored Note object with `state` set to `active`.
+
+<CodeGroup>
+```bash Restore a trashed note
+curl -X PATCH https://api.example.com/api/notes/a1b2c3d4-1234-5678-abcd-ef0123456789/restore \
+  -H "Authorization: Bearer <token>"
+```
+</CodeGroup>

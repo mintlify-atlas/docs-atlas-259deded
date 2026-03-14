@@ -1,0 +1,161 @@
+---
+title: "Configuration"
+description: "Environment variables and configuration options for Anchor"
+---
+
+Anchor is configured via environment variables passed to the Docker container. All variables are optional — the defaults work for most single-user or small team deployments.
+
+Add environment variables to the `environment` section of your `docker-compose.yml`:
+
+```yaml docker-compose.yml
+services:
+  anchor:
+    image: ghcr.io/zhfahim/anchor:latest
+    container_name: anchor
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - APP_URL=https://notes.example.com
+      - JWT_SECRET=your-secret-here
+    volumes:
+      - anchor_data:/data
+
+volumes:
+  anchor_data:
+```
+
+## All environment variables
+
+### General
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `APP_URL` | `http://localhost:3000` | Base URL where Anchor is publicly accessible. Used for OIDC callback URLs and redirects. Set this to your public domain when running behind a reverse proxy. |
+| `JWT_SECRET` | (auto-generated) | Secret used to sign authentication tokens. If not set, Anchor generates a random secret on first start and persists it in `/data` so it survives restarts. Set this explicitly if you need a stable, portable value. |
+
+### Database
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PG_HOST` | (empty) | Hostname of an external PostgreSQL server. Leave empty to use the embedded PostgreSQL instance bundled inside the container. |
+| `PG_PORT` | `5432` | Port of the PostgreSQL server. |
+| `PG_USER` | `anchor` | PostgreSQL username. |
+| `PG_PASSWORD` | `password` | PostgreSQL password. |
+| `PG_DATABASE` | `anchor` | PostgreSQL database name. |
+
+See [Database](/self-hosting/database) for a full explanation of the embedded vs external database options.
+
+### User registration
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `USER_SIGNUP` | (not set) | Controls who can create new accounts. Accepted values: `enabled` (anyone can sign up), `disabled` (no new sign-ups), `review` (accounts require admin approval). When not set, admins can change this setting from the admin panel at any time. |
+
+### OIDC authentication
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `OIDC_ENABLED` | — | Set to `true` to enable OpenID Connect authentication. |
+| `OIDC_PROVIDER_NAME` | `OIDC Provider` | Display name shown on the login button (e.g. `Pocket ID`, `Authelia`). |
+| `OIDC_ISSUER_URL` | — | Base URL of your OIDC provider. Required when OIDC is enabled. |
+| `OIDC_CLIENT_ID` | — | Client ID registered with your OIDC provider. Required when OIDC is enabled. |
+| `OIDC_CLIENT_SECRET` | — | Client secret for confidential clients. Omit entirely for public clients that use PKCE (required for the mobile app). |
+| `DISABLE_INTERNAL_AUTH` | `false` | Set to `true` to hide the local username/password login form, making OIDC the only sign-in method. |
+
+<Note>
+  When `OIDC_ENABLED`, `OIDC_ISSUER_URL`, and `OIDC_CLIENT_ID` are all set via environment variables, the OIDC settings panel in the admin UI is disabled. You can also configure OIDC entirely through the admin panel under **Settings → OIDC Authentication** without using environment variables.
+</Note>
+
+## Configuration profiles
+
+The examples below show common deployment scenarios.
+
+<CodeGroup>
+
+```yaml Minimal (defaults)
+services:
+  anchor:
+    image: ghcr.io/zhfahim/anchor:latest
+    container_name: anchor
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - anchor_data:/data
+
+volumes:
+  anchor_data:
+```
+
+```yaml With external PostgreSQL
+services:
+  anchor:
+    image: ghcr.io/zhfahim/anchor:latest
+    container_name: anchor
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - APP_URL=https://notes.example.com
+      - JWT_SECRET=change-me-to-a-long-random-string
+      - PG_HOST=db.example.com
+      - PG_PORT=5432
+      - PG_USER=anchor
+      - PG_PASSWORD=strong-password
+      - PG_DATABASE=anchor
+    volumes:
+      - anchor_data:/data
+
+volumes:
+  anchor_data:
+```
+
+```yaml With OIDC (e.g. Pocket ID)
+services:
+  anchor:
+    image: ghcr.io/zhfahim/anchor:latest
+    container_name: anchor
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - APP_URL=https://notes.example.com
+      - JWT_SECRET=change-me-to-a-long-random-string
+      - OIDC_ENABLED=true
+      - OIDC_PROVIDER_NAME=Pocket ID
+      - OIDC_ISSUER_URL=https://pocketid.example.com
+      - OIDC_CLIENT_ID=your-client-id
+      - OIDC_CLIENT_SECRET=your-client-secret
+      - DISABLE_INTERNAL_AUTH=false
+    volumes:
+      - anchor_data:/data
+
+volumes:
+  anchor_data:
+```
+
+</CodeGroup>
+
+## OIDC callback URLs
+
+When configuring Anchor as a client in your OIDC provider, register the following redirect/callback URLs:
+
+**Web app:**
+```
+{APP_URL}/api/auth/oidc/callback
+```
+
+For example, if `APP_URL` is `https://notes.example.com`:
+```
+https://notes.example.com/api/auth/oidc/callback
+```
+
+**Mobile app** (public client / PKCE only):
+```
+anchor://oidc/callback
+```
+
+<Warning>
+  If you use OIDC with the mobile app, you must configure Anchor as a **public client** (PKCE, no client secret) in your OIDC provider. Register both redirect URIs if you want to support both web and mobile login.
+</Warning>

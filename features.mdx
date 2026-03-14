@@ -1,0 +1,160 @@
+---
+title: "Features"
+description: "Everything Anchor can do"
+---
+
+<Columns cols={2}>
+  <Card title="Rich text editor" icon="pen-to-square">
+    Bold, italic, underline, H1–H3 headings, ordered and unordered lists, and checkboxes.
+  </Card>
+  <Card title="Offline-first" icon="wifi-slash">
+    Local database on web and mobile. Full read and write access with no internet connection.
+  </Card>
+  <Card title="Note sharing" icon="share-nodes">
+    Share any note with another user on your instance as a viewer or editor.
+  </Card>
+  <Card title="Tags" icon="tag">
+    Create custom tags with colors and use them to filter your notes.
+  </Card>
+  <Card title="Note backgrounds" icon="palette">
+    Apply solid colors or patterns to individual notes.
+  </Card>
+  <Card title="Pin notes" icon="thumbtack">
+    Pin important notes so they stay at the top of your list.
+  </Card>
+  <Card title="Archive" icon="box-archive">
+    Move notes out of your active list without deleting them.
+  </Card>
+  <Card title="Search" icon="magnifying-glass">
+    Search notes by title or content, entirely on-device.
+  </Card>
+  <Card title="Trash" icon="trash">
+    Soft-delete notes with a recovery window, or permanently delete them immediately.
+  </Card>
+  <Card title="Automatic sync" icon="rotate">
+    Changes made on any device sync to your server when a connection is available.
+  </Card>
+  <Card title="Admin panel" icon="shield-halved">
+    Manage users, control registration, and view system statistics.
+  </Card>
+  <Card title="OIDC authentication" icon="id-card">
+    Sign in with any OpenID Connect provider alongside or instead of local accounts.
+  </Card>
+</Columns>
+
+---
+
+## Rich text editor
+
+The note editor supports inline formatting and block-level structure:
+
+- **Inline**: bold, italic, underline
+- **Headings**: H1, H2, H3
+- **Lists**: ordered (numbered) and unordered (bulleted)
+- **Checkboxes**: interactive task items within a note
+
+Formatting is stored as structured content, not raw HTML, so it renders consistently across web and mobile.
+
+## Offline-first
+
+Anchor stores all notes and tags in a local database on both the web client and the Android app. Every read and write operation targets local storage first. When you open a note, edit it, or create a new one, no network request is required.
+
+When a connection becomes available, the client calls `POST /api/notes/sync` and `POST /api/tags/sync` to reconcile local changes with the server. Conflicts are resolved server-side and the updated state is returned to the client.
+
+<Tip>
+  Because sync is incremental, it works well on slow or intermittent connections. Only changed records are transmitted.
+</Tip>
+
+## Note sharing
+
+You can share any note you own with another registered user on the same Anchor instance. Each share has one of two permission levels, sourced directly from the `NoteSharePermission` enum in the database schema:
+
+| Permission | What the recipient can do |
+|---|---|
+| `viewer` | Read the note; cannot edit |
+| `editor` | Read and edit the note |
+
+Shares are managed through the `POST /api/notes/:id/shares` endpoint. You can update a share's permission level with `PATCH /api/notes/:id/shares/:shareId` or revoke access entirely with `DELETE /api/notes/:id/shares/:shareId`. A note can be shared with multiple users simultaneously, and each share is independent.
+
+<Note>
+  Only the note owner can create, update, or revoke shares.
+</Note>
+
+## Tags system
+
+Tags help you organize notes into named, colored groups. Each tag belongs to your account (tags are not shared), has a unique name per user, and an optional `color` field you can set to any hex value.
+
+You can filter your note list to a single tag using the `tagId` query parameter on `GET /api/notes`. The `GET /api/tags/:id/notes` endpoint also returns all notes for a specific tag directly.
+
+Tags sync to the server the same way notes do — via `POST /api/tags/sync` — so your tag library stays consistent across devices.
+
+## Note backgrounds
+
+Each note has an optional `background` field. You can set it to a solid color or a pattern. Backgrounds are purely visual and stored per note, so different notes on the same board can have different appearances.
+
+## Pin notes
+
+Setting `isPinned: true` on a note causes it to surface at the top of your note list. Pinning is useful for notes you return to frequently — meeting templates, reference material, ongoing projects. You can pin and unpin notes at any time via `PATCH /api/notes/:id`.
+
+## Archive notes
+
+Archived notes (`isArchived: true`) are removed from your main note list but not deleted. They remain fully editable and are accessible from the archive view, which maps to `GET /api/notes/archive`. Use archiving for notes you want to keep for reference but don't need surfaced in your day-to-day view.
+
+## Search
+
+The `GET /api/notes` endpoint accepts a `search` query parameter that filters notes by title or content. Search runs against your local database on the client, so results are instant and available offline. There is no index to build or maintain.
+
+## Trash
+
+Deleting a note moves it to the trash by setting its `state` to `trashed` — the `NoteState` enum in the schema defines three states: `active`, `trashed`, and `deleted`. Trashed notes are visible in the trash view (`GET /api/notes/trash`) and can be restored with `PATCH /api/notes/:id/restore`.
+
+To remove a note permanently and irrecoverably, use `DELETE /api/notes/:id/permanent`. Bulk soft-delete is also available via `POST /api/notes/bulk/delete`.
+
+<Warning>
+  Permanent deletion cannot be undone. The note and all its shares are removed from the database.
+</Warning>
+
+## Automatic sync
+
+Both the notes and tags APIs expose a `/sync` endpoint that the clients call when coming back online. The sync payload includes locally created, updated, and deleted records. The server merges changes and returns the current server state, which the client writes back to its local database.
+
+This means the same notes are available on your phone, your browser, and any other device you've signed in to — with no manual export or import required.
+
+## Admin panel
+
+Admins can access a management interface that includes:
+
+- **User management**: view registered users, their status (`active` or `pending`), and admin flag
+- **Registration control**: set sign-up to `disabled`, `enabled`, or `review` mode (pending accounts require admin approval before they can sign in)
+- **System statistics**: monitor instance activity
+
+The `USER_SIGNUP` environment variable sets the default registration mode. If the variable is not set, an admin can change the mode at any time from the admin panel without restarting the container.
+
+<Info>
+  The `review` signup mode lets you run a semi-open instance: anyone can register, but accounts are inactive until you approve them.
+</Info>
+
+## OIDC authentication
+
+Anchor supports OpenID Connect for both web and mobile login. Compatible providers include Pocket ID, Authelia, Authentik, and Keycloak.
+
+Key behaviors:
+
+- **Auto-create**: if a user signs in via OIDC for the first time and registration is not disabled, their account is created automatically
+- **Auto-link**: if a user with a matching email already exists, their account is linked to the OIDC subject on first login
+- **OIDC-only mode**: set `DISABLE_INTERNAL_AUTH=true` to hide the local login form and require all users to sign in through OIDC
+- **Public clients (PKCE)**: omit `OIDC_CLIENT_SECRET` to use PKCE instead of a client secret — required for the mobile app
+
+Configuration is available via environment variables in `docker-compose.yml` or through Settings → OIDC Authentication in the admin panel.
+
+```yaml
+environment:
+  - OIDC_ENABLED=true
+  - OIDC_PROVIDER_NAME=Pocket ID
+  - OIDC_ISSUER_URL=https://pocketid.example.com
+  - OIDC_CLIENT_ID=your-client-id
+  - OIDC_CLIENT_SECRET=your-client-secret
+  - APP_URL=https://notes.example.com
+```
+
+For mobile, add `anchor://oidc/callback` as a redirect URI in your OIDC provider and configure Anchor as a public client (no client secret).

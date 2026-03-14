@@ -1,0 +1,79 @@
+---
+title: "Admin settings"
+description: "Configure registration and OIDC settings from the admin panel"
+---
+
+## Registration mode
+
+Registration mode controls whether new users can create their own accounts.
+
+```http
+GET  /api/admin/settings/registration
+PATCH /api/admin/settings/registration
+```
+
+PATCH request body:
+
+```json
+{
+  "mode": "review"
+}
+```
+
+The `mode` field accepts one of three values:
+
+| Mode | Behavior |
+|---|---|
+| `enabled` | Anyone with access to the instance URL can register a new account. |
+| `disabled` | The registration form is hidden. Only admins can create new accounts via the admin panel. |
+| `review` | Users can register, but their accounts are set to `pending` and blocked until an admin approves them. |
+
+<Info>
+  If you set the `USER_SIGNUP` environment variable, it takes precedence over the value stored in the database and the admin panel will reflect but not override the env var setting.
+</Info>
+
+## OIDC settings
+
+Anchor supports configuring OIDC authentication through the admin panel as an alternative to environment variables.
+
+```http
+GET  /api/admin/settings/oidc
+PATCH /api/admin/settings/oidc
+```
+
+PATCH request body:
+
+```json
+{
+  "enabled": true,
+  "providerName": "Pocket ID",
+  "issuerUrl": "https://pocketid.example.com",
+  "clientId": "your-client-id",
+  "clientSecret": "your-client-secret",
+  "disableInternalAuth": false
+}
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `enabled` | boolean | Enables OIDC authentication. |
+| `providerName` | string | Display name shown on the login button (e.g. `"Pocket ID"`). |
+| `issuerUrl` | string | Base URL of your OIDC provider. |
+| `clientId` | string | OIDC client ID registered with your provider. |
+| `clientSecret` | string | OIDC client secret. Omit or leave blank for public clients (PKCE). |
+| `clearClientSecret` | boolean | Set to `true` to remove a previously saved client secret (converts to PKCE). |
+| `disableInternalAuth` | boolean | When `true`, hides the local username/password login form (OIDC-only mode). |
+
+<Warning>
+  When all three environment variables `OIDC_ENABLED`, `OIDC_ISSUER_URL`, and `OIDC_CLIENT_ID` are set, they take priority over the values saved through the admin UI. Changes you make in the panel will have no effect until those env vars are removed.
+</Warning>
+
+### Clearing a client secret
+
+To switch an existing confidential client (with a client secret) to a public PKCE client, send a PATCH request with `"clearClientSecret": true`. This removes the stored secret without requiring you to pass an empty string.
+
+```json
+{
+  "clearClientSecret": true
+}
+```

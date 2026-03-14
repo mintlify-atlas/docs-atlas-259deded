@@ -1,0 +1,112 @@
+---
+title: "Share note"
+description: "Share a note with another user"
+---
+
+<Info>
+  All requests to this endpoint require an `Authorization: Bearer <token>` header.
+</Info>
+
+## Request
+
+**POST** `/api/notes/:id/shares`
+
+Shares a note with another registered user. Only the note owner can share their note.
+
+### Headers
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token. Example: `Bearer eyJhbGci...`
+</ParamField>
+
+<ParamField header="Content-Type" type="string" required>
+  Must be `application/json`.
+</ParamField>
+
+### Path parameters
+
+<ParamField path="id" type="string" required>
+  The UUID of the note to share.
+</ParamField>
+
+### Body
+
+<ParamField body="sharedWithUserId" type="string" required>
+  The UUID of the user to share the note with. The user must already exist in the system.
+</ParamField>
+
+<ParamField body="permission" type="string" required>
+  The access level to grant. Must be one of:
+  - `viewer` — can read the note but cannot edit it.
+  - `editor` — can read and edit the note.
+</ParamField>
+
+<Note>
+  Each user can only be granted one share per note. Attempting to share a note with a user who already has an active share returns a conflict error. To change the permission, use the update share endpoint instead.
+</Note>
+
+## Response
+
+Returns the created share object.
+
+<ResponseField name="id" type="string" required>
+  Unique identifier for the share record (UUID).
+</ResponseField>
+
+<ResponseField name="noteId" type="string" required>
+  UUID of the shared note.
+</ResponseField>
+
+<ResponseField name="sharedWithUserId" type="string" required>
+  UUID of the user the note was shared with.
+</ResponseField>
+
+<ResponseField name="permission" type="string" required>
+  Access level granted: `viewer` or `editor`.
+</ResponseField>
+
+<ResponseField name="sharedByUserId" type="string" required>
+  UUID of the authenticated user who created this share.
+</ResponseField>
+
+<ResponseField name="isDeleted" type="boolean" required>
+  Always `false` for a newly created share.
+</ResponseField>
+
+<ResponseField name="createdAt" type="string" required>
+  ISO 8601 timestamp of creation.
+</ResponseField>
+
+<ResponseField name="updatedAt" type="string" required>
+  ISO 8601 timestamp of last update.
+</ResponseField>
+
+## Example
+
+<CodeGroup>
+
+```bash cURL
+curl --request POST \
+  --url https://your-instance.example.com/api/notes/n1b2c3d4-e5f6-7890-abcd-ef1234567890/shares \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "sharedWithUserId": "u2b3c4d5-e6f7-8901-bcde-f01234567891",
+    "permission": "editor"
+  }'
+```
+
+</CodeGroup>
+
+```json Response
+{
+  "id": "s1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "noteId": "n1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "sharedWithUserId": "u2b3c4d5-e6f7-8901-bcde-f01234567891",
+  "permission": "editor",
+  "sharedByUserId": "u1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "isDeleted": false,
+  "createdAt": "2025-03-14T10:00:00.000Z",
+  "updatedAt": "2025-03-14T10:00:00.000Z"
+}
+```

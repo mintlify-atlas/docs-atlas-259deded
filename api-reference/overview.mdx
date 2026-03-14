@@ -1,0 +1,92 @@
+---
+title: "API overview"
+description: "The Anchor REST API — base URL, authentication, and request format"
+---
+
+## Base URL
+
+All API endpoints are served under the `/api` prefix:
+
+```
+{APP_URL}/api
+```
+
+The default base URL for local development is `http://localhost:3001/api`. Set `APP_URL` in your environment to match your deployment.
+
+<Note>
+  The server listens on port `3001` by default (controlled by the `PORT` environment variable), not `3000`. If you have a reverse proxy mapping `APP_URL` to a different port, use that URL as your base.
+</Note>
+
+## Authentication
+
+Most endpoints require authentication. The API accepts a Bearer token in the `Authorization` header:
+
+```bash
+Authorization: Bearer <token>
+```
+
+Two token types share the same header format:
+
+| Token type | Lifetime | Typical use |
+|------------|----------|-------------|
+| JWT access token | Short-lived (minutes) | Interactive user sessions |
+| API token | Long-lived (until revoked) | Automated integrations, scripts |
+
+See [Authentication](/api-reference/authentication) for how to obtain and use each token type.
+
+## Request format
+
+All request and response bodies use JSON. Set the `Content-Type` header on every request that sends a body:
+
+```bash
+Content-Type: application/json
+```
+
+The server rejects unknown fields (`forbidNonWhitelisted: true`), so only send the fields documented for each endpoint.
+
+## API versioning
+
+The Anchor API is unversioned. All endpoints live directly under `/api` with no version segment. Breaking changes are noted in the changelog.
+
+## Endpoint groups
+
+| Group | Base path | Description |
+|-------|-----------|-------------|
+| Auth | `/api/auth` | Registration, login, token management, profile |
+| Notes | `/api/notes` | Create, read, update, delete, sync, bulk actions |
+| Tags | `/api/tags` | Tag management |
+| Note shares | `/api/notes/:id/shares` | Share notes with other users |
+| Admin | `/api/admin` | User management and settings (admin only) |
+
+## Error responses
+
+The API returns standard HTTP status codes. Error responses include a JSON body with a `message` field describing the problem.
+
+```json
+{
+  "statusCode": 400,
+  "message": ["password must be longer than or equal to 8 characters"],
+  "error": "Bad Request"
+}
+```
+
+| Status code | Meaning |
+|-------------|---------|
+| `400 Bad Request` | Validation failed — the request body contains invalid or missing fields. The `message` array lists each validation error. |
+| `401 Unauthorized` | Missing or invalid token, or the account is pending approval. |
+| `403 Forbidden` | Authenticated but not permitted — for example, accessing an admin endpoint without admin rights. |
+| `404 Not Found` | The requested resource does not exist or is not accessible to your account. |
+| `409 Conflict` | A resource with the same unique identifier already exists (for example, duplicate email on registration). |
+| `500 Internal Server Error` | An unexpected server-side error. |
+
+## JWT vs API token
+
+Use **JWT access tokens** for user-facing sessions: obtain them via login or registration, refresh them before they expire, and revoke them on logout.
+
+Use **API tokens** for long-lived programmatic access — for example, a sync client or a third-party integration that needs to make requests on behalf of a single user without re-authenticating. API tokens do not expire on their own; they remain valid until you revoke or regenerate them.
+
+Both token types are passed identically in the `Authorization` header:
+
+```bash
+Authorization: Bearer <access_token_or_api_token>
+```

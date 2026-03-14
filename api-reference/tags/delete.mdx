@@ -1,0 +1,84 @@
+---
+title: "Delete tag"
+description: "Delete a tag"
+---
+
+<Info>
+  All requests to this endpoint require an `Authorization: Bearer <token>` header.
+</Info>
+
+## Request
+
+**DELETE** `/api/tags/:id`
+
+### Headers
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token. Example: `Bearer eyJhbGci...`
+</ParamField>
+
+### Path parameters
+
+<ParamField path="id" type="string" required>
+  The UUID of the tag to delete.
+</ParamField>
+
+<Warning>
+  Deleting a tag is a soft delete — the record is not removed from the database. Instead, `isDeleted` is set to `true` and the tag continues to be returned by `GET /api/tags`. This behavior is intentional for offline-first sync: clients use `isDeleted` to reconcile deletions that occurred while they were offline.
+</Warning>
+
+## Response
+
+Returns the updated tag object with `isDeleted: true`.
+
+<ResponseField name="id" type="string" required>
+  Unique identifier for the tag (UUID).
+</ResponseField>
+
+<ResponseField name="name" type="string" required>
+  Display name of the tag.
+</ResponseField>
+
+<ResponseField name="color" type="string">
+  Color value for the tag, or `null`.
+</ResponseField>
+
+<ResponseField name="isDeleted" type="boolean" required>
+  `true` after a successful delete.
+</ResponseField>
+
+<ResponseField name="userId" type="string" required>
+  ID of the user who owns this tag.
+</ResponseField>
+
+<ResponseField name="createdAt" type="string" required>
+  ISO 8601 timestamp of creation.
+</ResponseField>
+
+<ResponseField name="updatedAt" type="string" required>
+  ISO 8601 timestamp of when the tag was soft-deleted.
+</ResponseField>
+
+## Example
+
+<CodeGroup>
+
+```bash cURL
+curl --request DELETE \
+  --url https://your-instance.example.com/api/tags/c3d4e5f6-a7b8-9012-cdef-012345678901 \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+```
+
+</CodeGroup>
+
+```json Response
+{
+  "id": "c3d4e5f6-a7b8-9012-cdef-012345678901",
+  "name": "research",
+  "color": "#EF4444",
+  "isDeleted": true,
+  "userId": "u1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "createdAt": "2025-03-01T14:22:00.000Z",
+  "updatedAt": "2025-03-14T11:00:00.000Z"
+}
+```

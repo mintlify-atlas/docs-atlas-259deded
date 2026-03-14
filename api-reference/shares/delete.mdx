@@ -1,0 +1,95 @@
+---
+title: "Remove share"
+description: "Remove a note share"
+---
+
+<Info>
+  All requests to this endpoint require an `Authorization: Bearer <token>` header.
+</Info>
+
+## Request
+
+**DELETE** `/api/notes/:id/shares/:shareId`
+
+Revokes a user's access to a shared note. Only the note owner can remove shares.
+
+### Headers
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token. Example: `Bearer eyJhbGci...`
+</ParamField>
+
+### Path parameters
+
+<ParamField path="id" type="string" required>
+  The UUID of the note.
+</ParamField>
+
+<ParamField path="shareId" type="string" required>
+  The UUID of the share record to revoke.
+</ParamField>
+
+<Warning>
+  Revoking a share is a soft delete — the share record is retained with `isDeleted: true` rather than being permanently removed. This ensures offline clients can sync the revocation correctly.
+</Warning>
+
+## Response
+
+Returns the updated share object with `isDeleted: true`.
+
+<ResponseField name="id" type="string" required>
+  Unique identifier for the share record (UUID).
+</ResponseField>
+
+<ResponseField name="noteId" type="string" required>
+  UUID of the note.
+</ResponseField>
+
+<ResponseField name="sharedWithUserId" type="string" required>
+  UUID of the user whose access was revoked.
+</ResponseField>
+
+<ResponseField name="permission" type="string" required>
+  The permission level that was assigned before revocation.
+</ResponseField>
+
+<ResponseField name="sharedByUserId" type="string" required>
+  UUID of the user who originally created the share.
+</ResponseField>
+
+<ResponseField name="isDeleted" type="boolean" required>
+  `true` after a successful revocation.
+</ResponseField>
+
+<ResponseField name="createdAt" type="string" required>
+  ISO 8601 timestamp of original creation.
+</ResponseField>
+
+<ResponseField name="updatedAt" type="string" required>
+  ISO 8601 timestamp of when the share was revoked.
+</ResponseField>
+
+## Example
+
+<CodeGroup>
+
+```bash cURL
+curl --request DELETE \
+  --url https://your-instance.example.com/api/notes/n1b2c3d4-e5f6-7890-abcd-ef1234567890/shares/s1b2c3d4-e5f6-7890-abcd-ef1234567890 \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+```
+
+</CodeGroup>
+
+```json Response
+{
+  "id": "s1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "noteId": "n1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "sharedWithUserId": "u2b3c4d5-e6f7-8901-bcde-f01234567891",
+  "permission": "viewer",
+  "sharedByUserId": "u1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "isDeleted": true,
+  "createdAt": "2025-03-14T10:00:00.000Z",
+  "updatedAt": "2025-03-14T13:00:00.000Z"
+}
+```

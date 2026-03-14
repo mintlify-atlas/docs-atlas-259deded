@@ -1,97 +1,99 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "Anchor"
+description: "Offline-first, self-hostable note-taking for web and mobile"
 ---
 
-## Setting up
-
-Get your documentation site up and running in minutes.
-
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
-
-## Make it yours
-
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
+<CardGroup cols={2}>
+  <Card title="Get Started" icon="rocket" href="/introduction">
+    Deploy Anchor with Docker in minutes and start taking notes
   </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
+  <Card title="Self Hosting" icon="server" href="/self-hosting/docker">
+    Run Anchor on your own infrastructure with full data ownership
   </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
+  <Card title="OIDC Authentication" icon="lock" href="/authentication/oidc">
+    Integrate with Pocket ID, Authelia, Keycloak, and more
   </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
+  <Card title="API Reference" icon="code" href="/api-reference/overview">
+    Build integrations using the Anchor REST API
   </Card>
-</Columns>
+</CardGroup>
 
-## Create beautiful pages
+## What is Anchor?
 
-Everything you need to create world-class documentation.
+Anchor is an offline-first, self-hostable note-taking application that works across web and Android. Notes are stored locally, remain fully editable without an internet connection, and sync automatically across all your devices when you're back online.
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
+<CardGroup cols={3}>
+  <Card title="Offline First" icon="wifi-slash">
+    All notes are stored in a local database. Edit anywhere, sync when ready.
   </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
+  <Card title="Self Hostable" icon="house-lock">
+    Deploy on your own server using Docker. Your data never leaves your infrastructure.
   </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
+  <Card title="Cross Platform" icon="mobile">
+    Available as a web app and Android mobile app with the same offline capabilities.
   </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
+  <Card title="Rich Text Editor" icon="pen-nib">
+    Bold, italic, headings, lists, checkboxes — everything you need to write well.
   </Card>
-</Columns>
+  <Card title="Note Sharing" icon="share-nodes">
+    Share notes with other users as viewer or editor, right from the app.
+  </Card>
+  <Card title="OIDC Support" icon="key">
+    Sign in with any OpenID Connect provider — no need to manage passwords.
+  </Card>
+</CardGroup>
 
-## Need inspiration?
+## Deploy in minutes
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+<Steps>
+  <Step title="Create a docker-compose.yml">
+    ```yaml docker-compose.yml
+    services:
+      anchor:
+        image: ghcr.io/zhfahim/anchor:latest
+        container_name: anchor
+        restart: unless-stopped
+        ports:
+          - "3000:3000"
+        volumes:
+          - anchor_data:/data
+
+    volumes:
+      anchor_data:
+    ```
+  </Step>
+  <Step title="Start the container">
+    ```bash
+    docker compose up -d
+    ```
+  </Step>
+  <Step title="Open Anchor">
+    Navigate to [http://localhost:3000](http://localhost:3000) and create your first account.
+  </Step>
+</Steps>
+
+<Note>
+  Anchor includes an embedded PostgreSQL database — no separate database setup is required for most deployments.
+</Note>
+
+## Key features
+
+- **Offline editing** — All changes are saved locally and synced automatically when online
+- **Rich text formatting** — Bold, italic, underline, headings (H1–H3), ordered and unordered lists, checkboxes
+- **Tags** — Create color-coded tags to organize notes by topic or project
+- **Note backgrounds** — Customize notes with solid colors and patterns
+- **Pin & archive** — Pin important notes to the top; archive notes you want to keep but not see daily
+- **Trash & recovery** — Soft-delete notes with a recovery window before permanent deletion
+- **Note sharing** — Share individual notes with other users as viewer or editor
+- **Search** — Full-text search across note titles and content, locally
+- **Admin panel** — Manage users, control registration, and view system statistics
+- **OIDC authentication** — Integrate with any OpenID Connect provider
+
+## Tech stack
+
+| Layer | Technology |
+|-------|-----------|
+| Backend | NestJS, PostgreSQL, Prisma |
+| Web frontend | Next.js, TypeScript |
+| Mobile | Flutter (Android) |
+| Deployment | Docker, embedded PostgreSQL |

@@ -1,0 +1,76 @@
+---
+title: "Bulk actions"
+description: "Perform actions on multiple notes at once"
+---
+
+<Info>
+  All requests require an `Authorization: Bearer <token>` header.
+</Info>
+
+Bulk endpoints let you apply the same operation to multiple notes in a single request. Both endpoints require you to be the **owner** of every note in the request. If any note is not found or does not belong to you, the entire request fails with `404`.
+
+## Bulk move to trash
+
+**POST** `/api/notes/bulk/delete`
+
+Moves multiple notes to trash by setting `state` to `trashed` on each note.
+
+### Request body
+
+<ParamField body="noteIds" type="string[]" required>
+  Array of note UUIDs to move to trash. Each entry must be a non-empty string. All notes must be owned by the authenticated user.
+</ParamField>
+
+### Response
+
+<ResponseField name="count" type="number">
+  The number of notes that were moved to trash.
+</ResponseField>
+
+<CodeGroup>
+```bash Move multiple notes to trash
+curl -X POST https://api.example.com/api/notes/bulk/delete \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "noteIds": [
+      "a1b2c3d4-1234-5678-abcd-ef0123456789",
+      "b2c3d4e5-2345-6789-bcde-f01234567890"
+    ]
+  }'
+```
+</CodeGroup>
+
+---
+
+## Bulk archive
+
+**POST** `/api/notes/bulk/archive`
+
+Sets `isArchived` to `true` on multiple notes.
+
+### Request body
+
+<ParamField body="noteIds" type="string[]" required>
+  Array of note UUIDs to archive. Each entry must be a non-empty string. All notes must be owned by the authenticated user.
+</ParamField>
+
+### Response
+
+<ResponseField name="count" type="number">
+  The number of notes that were archived.
+</ResponseField>
+
+<CodeGroup>
+```bash Archive multiple notes
+curl -X POST https://api.example.com/api/notes/bulk/archive \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "noteIds": [
+      "a1b2c3d4-1234-5678-abcd-ef0123456789",
+      "b2c3d4e5-2345-6789-bcde-f01234567890"
+    ]
+  }'
+```
+</CodeGroup>

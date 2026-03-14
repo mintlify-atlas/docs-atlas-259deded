@@ -1,0 +1,158 @@
+---
+title: "Sync notes"
+description: "Sync local notes with the server"
+---
+
+<Info>
+  All requests require an `Authorization: Bearer <token>` header.
+</Info>
+
+**POST** `/api/notes/sync`
+
+The core offline-sync endpoint. Send your locally modified notes to the server and receive back all server-side changes since your last sync. A single request handles both directions at once.
+
+## How sync works
+
+The server uses a **last-write-wins** strategy based on `updatedAt` timestamps:
+
+- For each note in `changes`, the server compares the client's `updatedAt` against the server's `updatedAt`.
+- If the client timestamp is **newer**, the client version is written to the server.
+- If the server timestamp is **newer or equal**, the server version is kept and the client should apply the server's copy (returned in `serverChanges`).
+- Notes that do not exist on the server are created, preserving the client-supplied `id`.
+- Notes where you only have `viewer` permission are skipped entirely.
+- Only the note owner can update `state` and `isArchived`; editors can update all other fields and tags.
+
+After processing your changes, the server returns all notes (own and shared) that were updated after `lastSyncedAt`. On the first sync, omit `lastSyncedAt` to receive all notes.
+
+<Note>
+  Tombstone notes (`state: deleted`) are included in `serverChanges` so your local client can remove them. Tombstones are retained on the server for 30 days before being purged.
+</Note>
+
+## Request body
+
+<ParamField body="lastSyncedAt" type="string">
+  ISO 8601 datetime of your previous sync. The server returns all notes modified after this timestamp. Omit on first sync to receive all notes.
+</ParamField>
+
+<ParamField body="changes" type="array">
+  Local notes to push to the server. Each item is a `SyncNoteDto`.
+  <Expandable title="SyncNoteDto fields">
+    <ParamField body="id" type="string" required>
+      The UUID of the note. If the note does not exist on the server, it is created with this ID.
+    </ParamField>
+    <ParamField body="title" type="string" required>
+      The note title.
+    </ParamField>
+    <ParamField body="updatedAt" type="string" required>
+      ISO 8601 datetime of the last local modification. Used for conflict resolution.
+    </ParamField>
+    <ParamField body="content" type="string">
+      The rich text content of the note.
+    </ParamField>
+    <ParamField body="isPinned" type="boolean">
+      Whether the note is pinned.
+    </ParamField>
+    <ParamField body="isArchived" type="boolean">
+      Whether the note is archived. Ignored if you are not the note owner.
+    </ParamField>
+    <ParamField body="background" type="string">
+      Background color or pattern identifier.
+    </ParamField>
+    <ParamField body="state" type="string">
+      Lifecycle state: `active`, `trashed`, or `deleted`. Ignored if you are not the note owner.
+    </ParamField>
+    <ParamField body="tagIds" type="string[]">
+      Full replacement list of tag UUIDs. Omit to leave tags unchanged.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+## Response
+
+<ResponseField name="serverChanges" type="array">
+  All notes (own and shared) that were updated on the server after `lastSyncedAt`. Apply these to your local store. Includes notes with `state: deleted` (tombstones) so you can remove them locally.
+</ResponseField>
+
+<ResponseField name="revokedSharedNoteIds" type="string[]">
+  UUIDs of previously-shared notes whose share was revoked since `lastSyncedAt`. Remove these from the local store.
+</ResponseField>
+
+<ResponseField name="processedIds" type="string[]">
+  UUIDs of notes from your `changes` array that were successfully processed (created or evaluated for update).
+</ResponseField>
+
+<ResponseField name="conflicts" type="array">
+  Conflict resolution outcomes for notes that already existed on the server.
+  <Expandable title="Conflict object">
+    <ResponseField name="noteId" type="string">
+      UUID of the note where a conflict was detected.
+    </ResponseField>
+    <ResponseField name="resolution" type="string">
+      Either `client` (client timestamp was newer — server was updated) or `server` (server timestamp was newer or equal — client should update from `serverChanges`).
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="syncedAt" type="string">
+  ISO 8601 datetime of when this sync was processed. Store this value and send it as `lastSyncedAt` on your next sync request.
+</ResponseField>
+
+<CodeGroup>
+```bash Initial sync (no prior state)
+curl -X POST https://api.example.com/api/notes/sync \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{}'
+```
+
+```bash Incremental sync with local changes
+curl -X POST https://api.example.com/api/notes/sync \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "lastSyncedAt": "2026-03-14T10:00:00.000Z",
+    "changes": [
+      {
+        "id": "a1b2c3d4-1234-5678-abcd-ef0123456789",
+        "title": "Updated locally",
+        "content": "<p>Edited while offline.</p>",
+        "isPinned": false,
+        "isArchived": false,
+        "state": "active",
+        "updatedAt": "2026-03-14T11:30:00.000Z"
+      }
+    ]
+  }'
+```
+</CodeGroup>
+
+### Example response
+
+```json
+{
+  "serverChanges": [
+    {
+      "id": "a1b2c3d4-1234-5678-abcd-ef0123456789",
+      "title": "Updated locally",
+      "content": "<p>Edited while offline.</p>",
+      "isPinned": false,
+      "isArchived": false,
+      "background": null,
+      "state": "active",
+      "userId": "user-uuid-here",
+      "createdAt": "2026-01-01T09:00:00.000Z",
+      "updatedAt": "2026-03-14T11:30:00.000Z",
+      "tags": []
+    }
+  ],
+  "revokedSharedNoteIds": [],
+  "processedIds": ["a1b2c3d4-1234-5678-abcd-ef0123456789"],
+  "conflicts": [
+    {
+      "noteId": "a1b2c3d4-1234-5678-abcd-ef0123456789",
+      "resolution": "client"
+    }
+  ],
+  "syncedAt": "2026-03-14T12:00:00.000Z"
+}
+```

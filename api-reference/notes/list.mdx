@@ -1,0 +1,146 @@
+---
+title: "List notes"
+description: "Retrieve all notes for the authenticated user"
+---
+
+<Info>
+  All requests require an `Authorization: Bearer <token>` header.
+</Info>
+
+## List active notes
+
+**GET** `/api/notes`
+
+Returns all active, non-archived notes that belong to you or have been shared with you. Results are ordered by `isPinned` descending, then `updatedAt` descending.
+
+### Query parameters
+
+<ParamField query="search" type="string">
+  Filter notes by title or content. The search is case-insensitive and matches partial strings in either field.
+</ParamField>
+
+<ParamField query="tagId" type="string">
+  Filter notes to those associated with a specific tag ID.
+</ParamField>
+
+<ParamField query="limit" type="number">
+  Maximum number of notes to return. Must be between 1 and 200. Non-numeric values are ignored.
+</ParamField>
+
+### Response
+
+Returns an array of Note objects.
+
+<ResponseField name="id" type="string">
+  The unique identifier (UUID) of the note.
+</ResponseField>
+
+<ResponseField name="title" type="string">
+  The title of the note.
+</ResponseField>
+
+<ResponseField name="content" type="string | null">
+  The rich text content of the note.
+</ResponseField>
+
+<ResponseField name="isPinned" type="boolean">
+  Whether the note is pinned to the top of the list.
+</ResponseField>
+
+<ResponseField name="isArchived" type="boolean">
+  Whether the note is archived.
+</ResponseField>
+
+<ResponseField name="background" type="string | null">
+  A color or pattern identifier for the note background.
+</ResponseField>
+
+<ResponseField name="state" type="string">
+  The lifecycle state of the note. One of `active`, `trashed`, or `deleted`.
+</ResponseField>
+
+<ResponseField name="createdAt" type="string">
+  ISO 8601 datetime when the note was created.
+</ResponseField>
+
+<ResponseField name="updatedAt" type="string">
+  ISO 8601 datetime when the note was last updated.
+</ResponseField>
+
+<ResponseField name="userId" type="string">
+  UUID of the user who owns the note.
+</ResponseField>
+
+<ResponseField name="tags" type="array">
+  Tags associated with this note.
+  <Expandable title="Tag object">
+    <ResponseField name="id" type="string">
+      UUID of the tag.
+    </ResponseField>
+    <ResponseField name="name" type="string">
+      Display name of the tag.
+    </ResponseField>
+    <ResponseField name="color" type="string | null">
+      Optional color associated with the tag.
+    </ResponseField>
+    <ResponseField name="userId" type="string">
+      UUID of the user who owns the tag.
+    </ResponseField>
+    <ResponseField name="createdAt" type="string">
+      ISO 8601 datetime when the tag was created.
+    </ResponseField>
+    <ResponseField name="updatedAt" type="string">
+      ISO 8601 datetime when the tag was last updated.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+```bash List all notes
+curl https://api.example.com/api/notes \
+  -H "Authorization: Bearer <token>"
+```
+
+```bash Search with filters
+curl "https://api.example.com/api/notes?search=meeting&tagId=tag_abc123&limit=20" \
+  -H "Authorization: Bearer <token>"
+```
+</CodeGroup>
+
+---
+
+## List trashed notes
+
+**GET** `/api/notes/trash`
+
+Returns all notes that have been moved to trash. Only notes you own are returned — shared notes you have access to do not appear here.
+
+### Response
+
+Returns an array of Note objects with `state` set to `trashed`.
+
+<CodeGroup>
+```bash List trashed notes
+curl https://api.example.com/api/notes/trash \
+  -H "Authorization: Bearer <token>"
+```
+</CodeGroup>
+
+---
+
+## List archived notes
+
+**GET** `/api/notes/archive`
+
+Returns all notes where `isArchived` is `true`. Only notes you own are returned.
+
+### Response
+
+Returns an array of Note objects with `isArchived` set to `true`.
+
+<CodeGroup>
+```bash List archived notes
+curl https://api.example.com/api/notes/archive \
+  -H "Authorization: Bearer <token>"
+```
+</CodeGroup>

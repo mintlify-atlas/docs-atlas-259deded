@@ -1,0 +1,99 @@
+---
+title: "Delete note"
+description: "Move a note to trash or permanently delete it"
+---
+
+<Info>
+  All requests require an `Authorization: Bearer <token>` header.
+</Info>
+
+Deletion works in two steps to support offline sync and accidental deletion recovery:
+
+1. **Move to trash** — sets `state` to `trashed`. The note is recoverable.
+2. **Permanent delete** — sets `state` to `deleted`, creating a tombstone record. The tombstone is preserved for 30 days so offline clients can learn about the deletion during sync, after which it is purged from the database.
+
+Both operations require you to be the note owner.
+
+## Move to trash
+
+**DELETE** `/api/notes/:id`
+
+Soft-deletes a note by moving it to the trash. The note can be recovered with the [restore endpoint](/api-reference/notes/update).
+
+### Path parameters
+
+<ParamField path="id" type="string" required>
+  The UUID of the note to trash.
+</ParamField>
+
+### Response
+
+Returns the updated Note object with `state` set to `trashed`.
+
+<ResponseField name="id" type="string">
+  UUID of the note.
+</ResponseField>
+
+<ResponseField name="title" type="string">
+  The title of the note.
+</ResponseField>
+
+<ResponseField name="state" type="string">
+  Always `trashed` after this operation.
+</ResponseField>
+
+<ResponseField name="updatedAt" type="string">
+  ISO 8601 datetime reflecting when the note was trashed.
+</ResponseField>
+
+<CodeGroup>
+```bash Move a note to trash
+curl -X DELETE https://api.example.com/api/notes/a1b2c3d4-1234-5678-abcd-ef0123456789 \
+  -H "Authorization: Bearer <token>"
+```
+</CodeGroup>
+
+---
+
+## Permanently delete a note
+
+**DELETE** `/api/notes/:id/permanent`
+
+Marks the note as permanently deleted by setting `state` to `deleted`. This creates a tombstone that offline clients use to learn about the deletion on their next sync.
+
+<Warning>
+  This action cannot be undone. The tombstone record is purged from the database after 30 days, but the note content is immediately inaccessible through all standard endpoints.
+</Warning>
+
+### Path parameters
+
+<ParamField path="id" type="string" required>
+  The UUID of the note to permanently delete.
+</ParamField>
+
+### Response
+
+Returns the updated Note object with `state` set to `deleted`.
+
+<ResponseField name="id" type="string">
+  UUID of the note.
+</ResponseField>
+
+<ResponseField name="title" type="string">
+  The title of the note.
+</ResponseField>
+
+<ResponseField name="state" type="string">
+  Always `deleted` after this operation.
+</ResponseField>
+
+<ResponseField name="updatedAt" type="string">
+  ISO 8601 datetime reflecting when the permanent deletion occurred.
+</ResponseField>
+
+<CodeGroup>
+```bash Permanently delete a note
+curl -X DELETE https://api.example.com/api/notes/a1b2c3d4-1234-5678-abcd-ef0123456789/permanent \
+  -H "Authorization: Bearer <token>"
+```
+</CodeGroup>

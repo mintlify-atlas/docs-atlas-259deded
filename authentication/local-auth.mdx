@@ -1,0 +1,315 @@
+---
+title: "Local authentication"
+description: "Username and password authentication for Anchor"
+---
+
+Local authentication lets users sign in with an email address and password. On successful login, Anchor issues a short-lived JWT access token and a long-lived refresh token. All protected endpoints require the access token in the `Authorization` header.
+
+## How it works
+
+Anchor uses two tokens:
+
+- **Access token** — a signed JWT included in every API request. Short-lived; the client should refresh it before it expires.
+- **Refresh token** — a long-lived opaque token (valid for 90 days) stored in the database. Use it to obtain a new access token without re-entering credentials. Tokens are rotated on every refresh — each use issues a new refresh token and invalidates the previous one.
+
+## Registration
+
+Before users can log in, they need an account. The registration flow depends on the current registration mode.
+
+### Registration modes
+
+| Mode | Behaviour |
+|------|-----------|
+| `enabled` | Anyone can register and immediately log in. |
+| `disabled` | New registrations are rejected. |
+| `review` | Accounts are created in a `pending` state and must be approved by an admin before the user can log in. |
+
+The mode is set with the `USER_SIGNUP` environment variable. If the variable is not set, admins can change the mode from the admin panel.
+
+<Note>
+  The very first user to register automatically becomes an admin, regardless of registration mode.
+</Note>
+
+### Creating an account
+
+<Steps>
+  <Step title="Check the registration mode">
+    Fetch the current mode before showing the registration form:
+
+    ```bash
+    GET /api/auth/registration-mode
+    ```
+
+    Response:
+
+    ```json
+    { "mode": "enabled" }
+    ```
+  </Step>
+
+  <Step title="Submit the registration form">
+    ```bash
+    POST /api/auth/register
+    Content-Type: application/json
+
+    {
+      "email": "alice@example.com",
+      "password": "supersecret",
+      "name": "Alice"
+    }
+    ```
+
+    Requirements:
+    - `email` — valid email address
+    - `password` — minimum 8 characters
+    - `name` — 1–100 characters (whitespace is trimmed)
+  </Step>
+
+  <Step title="Handle the response">
+    If the registration mode is `enabled`, the response includes tokens and the user can proceed directly:
+
+    ```json
+    {
+      "access_token": "eyJ...",
+      "refresh_token": "a3f9...",
+      "user": {
+        "id": "cuid",
+        "email": "alice@example.com",
+        "name": "Alice",
+        "profileImage": null,
+        "isAdmin": false,
+        "status": "active",
+        "createdAt": "2024-01-01T00:00:00.000Z",
+        "updatedAt": "2024-01-01T00:00:00.000Z"
+      }
+    }
+    ```
+
+    If the mode is `review`, no tokens are returned and the user must wait for admin approval:
+
+    ```json
+    {
+      "user": { "status": "pending", "..." : "..." },
+      "message": "Registration successful. Your account is pending approval."
+    }
+    ```
+  </Step>
+</Steps>
+
+## Login
+
+Exchange credentials for an access token and a refresh token.
+
+```bash
+POST /api/auth/login
+Content-Type: application/json
+
+{
+  "email": "alice@example.com",
+  "password": "supersecret"
+}
+```
+
+Successful response:
+
+```json
+{
+  "access_token": "eyJ...",
+  "refresh_token": "a3f9...",
+  "user": {
+    "id": "cuid",
+    "email": "alice@example.com",
+    "name": "Alice",
+    "profileImage": null,
+    "isAdmin": false,
+    "status": "active",
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z"
+  }
+}
+```
+
+Attach the access token to subsequent requests:
+
+```bash
+Authorization: Bearer eyJ...
+```
+
+## Token refresh
+
+When the access token expires, use the refresh token to get a new pair without prompting the user to log in again.
+
+```bash
+POST /api/auth/refresh
+Content-Type: application/json
+
+{
+  "refresh_token": "a3f9..."
+}
+```
+
+Response:
+
+```json
+{
+  "access_token": "eyJ...",
+  "refresh_token": "b8d2..."
+}
+```
+
+<Note>
+  Refresh tokens are rotated on every use. Store the new `refresh_token` from each response and discard the old one. The previous token is immediately invalidated.
+</Note>
+
+## Logout
+
+Revoke the refresh token so it can no longer be used. Pass the refresh token in the request body:
+
+```bash
+POST /api/auth/logout
+Content-Type: application/json
+
+{
+  "refreshToken": "a3f9..."
+}
+```
+
+This endpoint always returns `200 OK`. Omitting `refreshToken` is also valid — the request is a no-op.
+
+## Current user
+
+Fetch the authenticated user's profile:
+
+```bash
+GET /api/auth/me
+Authorization: Bearer eyJ...
+```
+
+Response:
+
+```json
+{
+  "id": "cuid",
+  "email": "alice@example.com",
+  "name": "Alice",
+  "profileImage": null,
+  "isAdmin": false,
+  "status": "active",
+  "createdAt": "2024-01-01T00:00:00.000Z",
+  "updatedAt": "2024-01-01T00:00:00.000Z"
+}
+```
+
+## Profile management
+
+### Update display name
+
+```bash
+PATCH /api/auth/profile
+Authorization: Bearer eyJ...
+Content-Type: application/json
+
+{
+  "name": "Alice Smith"
+}
+```
+
+The `name` field is optional; omit fields you do not want to change. Returns the updated user object.
+
+### Upload a profile image
+
+```bash
+POST /api/auth/profile/image
+Authorization: Bearer eyJ...
+Content-Type: multipart/form-data
+
+image: <file>
+```
+
+<Note>
+  Images must be JPEG, PNG, or WebP and must not exceed 5 MB. Profile images are stored in `/data/uploads/profiles/` inside the container.
+</Note>
+
+### Remove profile image
+
+```bash
+DELETE /api/auth/profile/image
+Authorization: Bearer eyJ...
+```
+
+Returns the updated user object with `profileImage` set to `null`.
+
+## Password change
+
+Change your password by providing the current password and a new one.
+
+```bash
+POST /api/auth/change-password
+Authorization: Bearer eyJ...
+Content-Type: application/json
+
+{
+  "currentPassword": "supersecret",
+  "newPassword": "evenmoresecret"
+}
+```
+
+Requirements:
+- `newPassword` — minimum 8 characters
+- `newPassword` must differ from `currentPassword`
+
+<Note>
+  OIDC-authenticated users do not have a local password. Calling this endpoint for an OIDC account returns a `400` error. Change the password through your identity provider instead.
+</Note>
+
+## API tokens
+
+API tokens are long-lived credentials for programmatic or script-based access. Unlike JWT access tokens, they do not expire automatically.
+
+### Get your API token
+
+```bash
+GET /api/auth/api-token
+Authorization: Bearer eyJ...
+```
+
+Response:
+
+```json
+{ "apiToken": "anch_live_..." }
+```
+
+The `apiToken` field is `null` if you have not generated one yet.
+
+### Generate or rotate an API token
+
+```bash
+POST /api/auth/api-token/regenerate
+Authorization: Bearer eyJ...
+```
+
+Generates a new token and immediately invalidates the previous one. Returns:
+
+```json
+{ "apiToken": "anch_live_..." }
+```
+
+### Revoke an API token
+
+```bash
+DELETE /api/auth/api-token
+Authorization: Bearer eyJ...
+```
+
+Sets `apiToken` to `null`. Returns `{ "apiToken": null }`.
+
+## Disabling local auth
+
+If you want users to sign in exclusively through an OIDC provider, set the `DISABLE_INTERNAL_AUTH` environment variable:
+
+```yaml docker-compose.yml
+environment:
+  - DISABLE_INTERNAL_AUTH=true
+```
+
+When this is `true`, the local login form is hidden in the UI. The underlying endpoints remain active, but all user-facing sign-in is routed through OIDC. See [OIDC authentication](/authentication/oidc) for setup instructions.

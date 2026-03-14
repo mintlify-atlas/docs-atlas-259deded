@@ -1,0 +1,44 @@
+---
+title: "Admin overview"
+description: "Administering your Anchor instance"
+---
+
+## Who is an admin
+
+The first user to register on a new Anchor instance is automatically granted admin status. Additional admins can be designated later through the admin panel by an existing admin (see [User management](/admin/user-management)).
+
+Admin status is stored on the `User` record as the `isAdmin` boolean flag. You cannot remove admin status from yourself, and the system will always protect at least one admin account from demotion or deletion.
+
+## What admins can do
+
+- **User management** — list, create, update, delete, and reset passwords for all users
+- **Registration control** — set whether new users can sign up freely, are blocked, or must be approved
+- **OIDC configuration** — configure OpenID Connect authentication from the UI without restarting the server
+- **System statistics** — view counts for total users, total notes, and total tags across the instance
+
+## System statistics
+
+The `GET /api/admin/stats` endpoint returns a snapshot of instance-wide activity:
+
+| Field | Description |
+|---|---|
+| `totalUsers` | Total number of registered user accounts |
+| `totalNotes` | Total notes that have not been permanently deleted |
+| `totalTags` | Total tags across all users |
+
+These stats are visible on the admin panel dashboard.
+
+## Accessing the admin panel
+
+From the web app, navigate to **Settings → Admin**. The admin menu entry is only visible to users with `isAdmin: true`.
+
+## What's in the admin panel
+
+<CardGroup cols={2}>
+  <Card title="User management" icon="users" href="/admin/user-management">
+    Create, edit, approve, and delete users. Reset passwords and manage the pending-users queue.
+  </Card>
+  <Card title="Settings" icon="sliders" href="/admin/settings">
+    Control registration mode and configure OIDC authentication from the UI.
+  </Card>
+</CardGroup>
